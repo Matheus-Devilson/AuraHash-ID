@@ -1,0 +1,32 @@
+# === LLAVES Y SECRETOS (CRÍTICO - NUNCA SUBIR) ===
+keys/*.pem
+keys/*.key
+keys/*.p12
+*.pem
+*.key
+.env
+.env.*
+
+# === IMÁGENES GENERADAS (se regeneran, no se suben) ===
+output/*.png
+output/*.jpg
+output/*.pdf
+
+# === PYTHON (basura del intérprete) ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# === EDITORES / SISTEMA OPERATIVO ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# === BACKUPS LOCALES ===
+backups/
