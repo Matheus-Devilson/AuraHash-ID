@@ -1,0 +1,5 @@
+# === AuraHash ID — Dependencias ===
+segno>=1.6.1          # Generación de códigos Data Matrix (ISO/IEC 16022)
+numpy>=1.24.0         # Generación del Aura Estocástica (matriz de ruido)
+Pillow>=10.0.0        # Composición y fusión de imágenes
+cryptography>=41.0.0  # Firma digital Ed25519 y manejo de llaves
