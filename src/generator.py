@@ -1,12 +1,16 @@
 """
-AuraHash ID — Generador Universal
-==================================
+AuraHash ID — Generador Universal v2.0.0
+==========================================
 
-Este script lee un archivo JSON con múltiples escenarios (salud, industria,
-personal, eventos), y para cada uno genera una imagen AuraHash con:
+Este script lee un archivo JSON con escenarios organizados en 3 capas:
+  - capa_publica:         Visible con Google Lens. Cero datos sensibles.
+  - capa_medica:          Datos de salud (cifrado en producción).
+  - capa_administrativa:  Datos legales/financieros (cifrado en producción).
+
+Para cada escenario genera una imagen AuraHash con:
   - Un código Data Matrix real (ISO/IEC 16022), escaneable por Google Lens.
   - Un "Aura Estocástica" (patrón de ruido determinista) alrededor.
-  - El texto legible con la huella criptográfica.
+  - Los hashes SHA-256 de cada capa visibles/embebidos para verificación.
 
 Uso:
     python src/generator.py
@@ -64,7 +68,6 @@ AURA_PALETTE = [
     (255, 180, 0),     # Ámbar dorado
 ]
 
-
 # =====================================================================
 # FUNCIÓN: Generar el Aura Estocástica
 # =====================================================================
@@ -83,22 +86,22 @@ def generar_aura(hash_hex: str, tamaño: int) -> Image.Image:
     # 2. Inicializar el generador pseudoaleatorio de NumPy con la semilla
     rng = np.random.default_rng(semilla)
 
-    # 3. Generar dos matrices de ruido: una de brillo y otra de color
+    # 3. Generar dos matrices de ruido
     ruido_brillo = rng.random((tamaño, tamaño))
     ruido_color = rng.random((tamaño, tamaño))
 
-    # 4. Elegir un color base de la paleta según el hash
+    # 4. Elegir color base de la paleta según el hash
     indice_color = semilla % len(AURA_PALETTE)
     color_base = AURA_PALETTE[indice_color]
 
-    # 5. Construir la matriz RGB del aura
+    # 5. Construir la matriz RGB
     fondo = np.array(COLOR_AURA_BG, dtype=float)
     color = np.array(color_base, dtype=float)
 
     factor = ruido_brillo[..., np.newaxis] ** 2
     matriz_rgb = fondo + (color - fondo) * factor
 
-    # 6. Añadir variación de color secundaria
+    # 6. Variación de color secundaria
     indice_color2 = (semilla // 7) % len(AURA_PALETTE)
     color_secundario = np.array(AURA_PALETTE[indice_color2], dtype=float)
     mascara_secundaria = (ruido_color > 0.75)[..., np.newaxis]
@@ -108,13 +111,13 @@ def generar_aura(hash_hex: str, tamaño: int) -> Image.Image:
         matriz_rgb
     )
 
-    # 7. Asegurar rango válido [0, 255]
+    # 7. Rango válido [0, 255]
     matriz_rgb = np.clip(matriz_rgb, 0, 255).astype(np.uint8)
 
-    # 8. Crear imagen PIL
+    # 8. Imagen PIL
     aura_img = Image.fromarray(matriz_rgb, mode="RGB")
 
-    # 9. Aplicar máscara circular
+    # 9. Máscara circular con desenfoque
     mascara = Image.new("L", (tamaño, tamaño), 0)
     draw_mask = ImageDraw.Draw(mascara)
     radio = int(tamaño * 0.48)
@@ -139,12 +142,8 @@ def generar_aura(hash_hex: str, tamaño: int) -> Image.Image:
 def generar_data_matrix(texto: str, tamaño: int) -> Image.Image:
     """
     Genera un Data Matrix real (ISO/IEC 16022) a partir de un texto.
-
-    Usa segno.make() que selecciona automáticamente la versión de Data Matrix
-    más pequeña que pueda contener el texto.
     """
-    # 1. Generar el Data Matrix con segno
-    #    micro=False fuerza Data Matrix estándar (no Micro DM)
+    # 1. Generar con segno (micro=False asegura Data Matrix estándar)
     qr = segno.make(texto, micro=False)
 
     # 2. Guardar en memoria como PNG
@@ -173,7 +172,6 @@ def generar_data_matrix(texto: str, tamaño: int) -> Image.Image:
 def obtener_fuente(tamaño: int) -> ImageFont.ImageFont:
     """
     Intenta cargar una fuente monoespaciada del sistema.
-    Si falla, usa la fuente por defecto de Pillow.
     """
     candidatas = [
         "C:/Windows/Fonts/consola.ttf",
@@ -188,7 +186,6 @@ def obtener_fuente(tamaño: int) -> ImageFont.ImageFont:
             continue
     return ImageFont.load_default()
 
-
 # =====================================================================
 # FUNCIÓN: Componer la imagen final
 # =====================================================================
@@ -196,12 +193,15 @@ def obtener_fuente(tamaño: int) -> ImageFont.ImageFont:
 def componer_imagen(
     aura: Image.Image,
     data_matrix: Image.Image,
-    hash_hex: str,
+    hash_publico: str,
     id_escenario: str,
     sector: str,
 ) -> Image.Image:
     """
     Compone la imagen final: fondo blanco + aura + data matrix + texto.
+
+    Ahora muestra el hash de la CAPA PÚBLICA (no de todo el payload)
+    para reforzar el concepto de separación de capas.
     """
     # 1. Lienzo base blanco
     lienzo = Image.new("RGB", (IMG_WIDTH, IMG_HEIGHT), COLOR_BG)
@@ -234,9 +234,9 @@ def componer_imagen(
     texto_sector = f"[{sector.upper()}]"
     draw.text((IMG_WIDTH - 160, 40), texto_sector, fill=COLOR_TEXT, font=fuente_sector)
 
-    # 6. Hash truncado formateado
+    # 6. Hash de la capa pública (formato agrupado)
     fuente_hash = obtener_fuente(22)
-    hash_truncado = hash_hex[:20].upper()
+    hash_truncado = hash_publico[:20].upper()
     hash_formateado = " ".join(
         hash_truncado[i:i + 4] for i in range(0, len(hash_truncado), 4)
     )
@@ -277,41 +277,72 @@ def componer_imagen(
 
 
 # =====================================================================
-# FUNCIÓN: Procesar un escenario individual
+# FUNCIÓN: Serializar una capa a JSON canónico
+# =====================================================================
+
+def serializar_capa(capa) -> str:
+    """
+    Serializa una capa del payload a JSON canónico.
+    Si la capa es None, devuelve cadena vacía.
+    """
+    if capa is None:
+        return ""
+    return json.dumps(capa, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+
+
+# =====================================================================
+# FUNCIÓN: Procesar un escenario individual (v2.0.0 - 3 capas)
 # =====================================================================
 
 def procesar_escenario(escenario: dict) -> Path:
     """
-    Procesa un único escenario del JSON y devuelve la ruta de la imagen generada.
+    Procesa un único escenario del JSON (con 3 capas) y devuelve la ruta PNG.
     """
     # 1. Extraer datos
     id_escenario = escenario["id"]
     sector = escenario.get("sector", "general")
-    payload = escenario["payload"]
+    capa_publica = escenario.get("capa_publica")
+    capa_medica = escenario.get("capa_medica")
+    capa_administrativa = escenario.get("capa_administrativa")
 
-    # 2. Serializar payload a JSON canónico
-    payload_json = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    # 2. Serializar cada capa a JSON canónico
+    json_publica = serializar_capa(capa_publica)
+    json_medica = serializar_capa(capa_medica)
+    json_admin = serializar_capa(capa_administrativa)
 
-    # 3. Calcular hash SHA-256
-    hash_hex = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+    # 3. Calcular hash SHA-256 de cada capa
+    hash_publica = hashlib.sha256(json_publica.encode("utf-8")).hexdigest()
+    hash_medica = hashlib.sha256(json_medica.encode("utf-8")).hexdigest() if json_medica else ""
+    hash_admin = hashlib.sha256(json_admin.encode("utf-8")).hexdigest() if json_admin else ""
 
-    # 4. Generar el Aura
-    aura = generar_aura(hash_hex, AURA_SIZE)
+    # 4. El hash "maestro" del escenario = hash de la concatenación de los 3 hashes
+    hash_maestro = hashlib.sha256(
+        (hash_publica + hash_medica + hash_admin).encode("utf-8")
+    ).hexdigest()
 
-    # 5. Preparar contenido del Data Matrix
-    contenido_dm = f"{payload_json}|SHA256:{hash_hex[:16]}"
+    # 5. Generar el Aura usando el hash maestro (determinista)
+    aura = generar_aura(hash_maestro, AURA_SIZE)
+
+    # 6. Contenido del Data Matrix: las 3 capas separadas por marcadores
+    #    En producción, las capas médica y admin irían cifradas aquí.
+    contenido_dm = (
+        f"PUB:{json_publica}"
+        f"|MED:{json_medica}"
+        f"|ADM:{json_admin}"
+        f"|SHA:{hash_maestro[:16]}"
+    )
     data_matrix = generar_data_matrix(contenido_dm, DM_SIZE)
 
-    # 6. Componer imagen final
+    # 7. Componer imagen final
     imagen_final = componer_imagen(
         aura=aura,
         data_matrix=data_matrix,
-        hash_hex=hash_hex,
+        hash_publico=hash_publica,
         id_escenario=id_escenario,
         sector=sector,
     )
 
-    # 7. Guardar
+    # 8. Guardar
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     ruta_salida = OUTPUT_DIR / f"aura_{id_escenario}.png"
     imagen_final.save(ruta_salida, "PNG", optimize=True)
@@ -328,7 +359,7 @@ def main() -> None:
     Orquestador principal.
     """
     print("=" * 60)
-    print("  AuraHash ID — Generador Universal")
+    print("  AuraHash ID — Generador Universal v2.0.0")
     print("=" * 60)
     print()
 

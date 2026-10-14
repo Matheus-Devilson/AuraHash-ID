@@ -1,0 +1,84 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "AuraHash ID — Ejemplos universales por sector",
+    "generated_by": "AuraHash-ID / data/example_data.json"
+  },
+  "escenarios": [
+    {
+      "id": "salud_emergencia_01",
+      "sector": "salud",
+      "descripcion": "Pulsera de emergencia para paciente con alergias críticas",
+      "payload": {
+        "tipo": "PACIENTE",
+        "id_interno": "HOSP-MX-2024-00871",
+        "nombre": "Ana Ejemplo",
+        "tipo_sangre": "O+",
+        "alergias": ["Penicilina", "Sulfamidas"],
+        "condiciones": ["Diabetes Tipo 2"],
+        "contacto_emergencia": {
+          "nombre": "Carlos Ejemplo",
+          "parentesco": "Hermano",
+          "telefono": "+52 55 1234 5678"
+        },
+        "notas": "Requiere insulina diaria. No administrar ibuprofeno."
+      }
+    },
+    {
+      "id": "industria_activo_01",
+      "sector": "industria",
+      "descripcion": "Placa de identificación para válvula industrial en zona remota",
+      "payload": {
+        "tipo": "ACTIVO_INDUSTRIAL",
+        "id_interno": "PLANT-NORTE-VALV-0099",
+        "nombre": "Válvula de presión principal",
+        "modelo": "PV-400X",
+        "fabricante": "Industrias Ejemplo S.A.",
+        "fecha_instalacion": "2023-06-15",
+        "ultimo_mantenimiento": "2024-09-20",
+        "proximo_mantenimiento": "2025-03-20",
+        "torque_nominal_nm": 50,
+        "temperatura_max_c": 180,
+        "presion_max_psi": 1200,
+        "notas": "Requiere calibración anual certificada."
+      }
+    },
+    {
+      "id": "personal_infantil_01",
+      "sector": "personal",
+      "descripcion": "Pulsera para niño en evento masivo / parque temático",
+      "payload": {
+        "tipo": "IDENTIFICACION_INFANTIL",
+        "id_interno": "AURA-KID-2024-04231",
+        "nombre": "Mateo Ejemplo",
+        "edad": 7,
+        "mensaje": "Estoy perdido. Por favor, contacta a mi familia.",
+        "contacto_emergencia": {
+          "nombre": "María Ejemplo",
+          "parentesco": "Madre",
+          "telefono": "+52 55 8765 4321"
+        },
+        "notas": "Alérgico a frutos secos. Habla español."
+      }
+    },
+    {
+      "id": "evento_boleto_01",
+      "sector": "eventos",
+      "descripcion": "Boleto nominativo para concierto con verificación en puerta",
+      "payload": {
+        "tipo": "BOLETO_EVENTO",
+        "id_interno": "NOVA-ECLIPSE-2025-SEC-A-AS-04",
+        "evento": "NOVA: Eclipse World Tour",
+        "fecha": "2025-11-15T20:30:00",
+        "recinto": "Estadio Ejemplo",
+        "seccion": "A",
+        "asiento": 4,
+        "titular": "Ana Ejemplo",
+        "id_titular": "CURP-EJEMPLO-123456",
+        "folio": "280423-28",
+        "politica": "Nominativo e intransferible. Reembolso hasta 48h antes.",
+        "notas": "Presentar identificación oficial en acceso."
+      }
+    }
+  ]
+}

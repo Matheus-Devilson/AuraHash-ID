@@ -1,0 +1,181 @@
+{
+  "_meta": {
+    "version": "2.0.0",
+    "description": "AuraHash ID — Arquitectura de 3 capas por sector",
+    "generated_by": "AuraHash-ID / data/example_data.json",
+    "privacy_note": "capa_publica es visible con Google Lens. Las otras 2 irán cifradas en producción.",
+    "architecture": {
+      "capa_publica": "Texto plano. Visible por cualquiera.",
+      "capa_medica": "Datos de salud. Requiere App AuraHash Reader (paramédicos).",
+      "capa_administrativa": "Datos legales/financieros. Requiere login (hospital/aseguradora)."
+    }
+  },
+  "escenarios": [
+    {
+      "id": "salud_emergencia_01",
+      "sector": "salud",
+      "descripcion": "Pulsera de emergencia para paciente con alergias críticas",
+      "capa_publica": {
+        "tipo": "EMERGENCIA_MEDICA",
+        "instruccion": "Llame al 911 o contacte a familiar",
+        "nombre_pila": "Ana",
+        "alergias_criticas": "Penicilina",
+        "id_visual": "7A3C-91F2"
+      },
+      "capa_medica": {
+        "nombre_completo": "Ana Ejemplo",
+        "edad": 34,
+        "peso_aprox_kg": 78,
+        "tipo_sangre": "O+",
+        "alergias": ["Penicilina", "Sulfamidas"],
+        "medicamentos": ["Insulina diaria", "Warfarina"],
+        "condiciones": ["Diabetes Tipo 2"],
+        "notas": "Autorizo tratamiento de emergencia. Alérgica a penicilina.",
+        "contactos_escalado": [
+          {"nombre": "María Ejemplo", "parentesco": "Esposa", "telefono": "+52 55 8765 4321"},
+          {"nombre": "Carlos Ejemplo", "parentesco": "Hermano", "telefono": "+52 55 1234 5678"},
+          {"nombre": "Dra. López", "parentesco": "Médico personal", "telefono": "+52 55 9999 0000"}
+        ]
+      },
+      "capa_administrativa": {
+        "curp_parcial": "****1234",
+        "curp_hash": "a3f2c8e1b9d4f6a7c5e8b2d9f1a3c6e8",
+        "aseguradora": "GNP Seguros",
+        "poliza": "GNP-2024-123456789-A",
+        "tel_aseguradora": "800-400-9000",
+        "donante_organos": "SI"
+      }
+    },
+    {
+      "id": "industria_activo_01",
+      "sector": "industria",
+      "descripcion": "Placa de identificación para válvula industrial en zona remota",
+      "capa_publica": {
+        "tipo": "ACTIVO_INDUSTRIAL",
+        "instruccion": "Verificar con App AuraHash Reader",
+        "nombre_pila": "Válvula PV-400X",
+        "id_visual": "17D4-AEF8"
+      },
+      "capa_medica": null,
+      "capa_administrativa": {
+        "id_interno": "PLANT-NORTE-VALV-0099",
+        "modelo": "PV-400X",
+        "fabricante": "Industrias Ejemplo S.A.",
+        "fecha_instalacion": "2023-06-15",
+        "ultimo_mantenimiento": "2024-09-20",
+        "proximo_mantenimiento": "2025-03-20",
+        "torque_nominal_nm": 50,
+        "temperatura_max_c": 180,
+        "presion_max_psi": 1200,
+        "notas": "Requiere calibración anual certificada."
+      }
+    },
+    {
+      "id": "personal_ciclista_01",
+      "sector": "personal",
+      "descripcion": "Ciclista herido en carretera a las 2 AM - Emergencia médica",
+      "capa_publica": {
+        "tipo": "EMERGENCIA_MEDICA",
+        "instruccion": "Llame al 911 inmediatamente",
+        "nombre_pila": "Luis",
+        "alergias_criticas": "Ninguna conocida",
+        "id_visual": "DF5F-4938"
+      },
+      "capa_medica": {
+        "nombre_completo": "Luis Ejemplo",
+        "edad": 42,
+        "peso_aprox_kg": 82,
+        "tipo_sangre": "A+",
+        "alergias": [],
+        "medicamentos": [],
+        "condiciones": [],
+        "notas": "Ciclista frecuente. Autorizo tratamiento de emergencia.",
+        "contactos_escalado": [
+          {"nombre": "Sofía Ejemplo", "parentesco": "Esposa", "telefono": "+52 55 1111 2222"},
+          {"nombre": "Pedro Ejemplo", "parentesco": "Padre", "telefono": "+52 55 3333 4444"}
+        ]
+      },
+      "capa_administrativa": {
+        "curp_parcial": "****5678",
+        "curp_hash": "b7e3d9f2a1c4b8e6d5f9a2c3b6d7e8f1",
+        "aseguradora": "AXA Seguros",
+        "poliza": "AXA-2024-987654321",
+        "tel_aseguradora": "800-900-1290",
+        "donante_organos": "SI"
+      }
+    },
+    {
+      "id": "personal_infantil_01",
+      "sector": "personal",
+      "descripcion": "Pulsera para niño en evento masivo / parque temático",
+      "capa_publica": {
+        "tipo": "NIÑO_PERDIDO",
+        "instruccion": "Estoy perdido. Por favor, contacta a mi familia.",
+        "nombre_pila": "Mateo",
+        "alergias_criticas": "Frutos secos",
+        "telefono_emergencia": "+52 55 8765 4321",
+        "id_visual": "613E-3E7C"
+      },
+      "capa_medica": {
+        "nombre_completo": "Mateo Ejemplo",
+        "edad": 7,
+        "alergias": ["Frutos secos"],
+        "notas": "Habla español. No dar alimentos sin supervisión.",
+        "contactos_escalado": [
+          {"nombre": "María Ejemplo", "parentesco": "Madre", "telefono": "+52 55 8765 4321"},
+          {"nombre": "Jorge Ejemplo", "parentesco": "Padre", "telefono": "+52 55 7654 3210"}
+        ]
+      },
+      "capa_administrativa": null
+    },
+    {
+      "id": "evento_boleto_01",
+      "sector": "eventos",
+      "descripcion": "Boleto nominativo para concierto con verificación en puerta",
+      "capa_publica": {
+        "tipo": "BOLETO_EVENTO",
+        "instruccion": "Escanee con Google Lens para verificar",
+        "evento": "NOVA: Eclipse World Tour",
+        "id_visual": "7EBE-48E7"
+      },
+      "capa_medica": null,
+      "capa_administrativa": {
+        "id_interno": "NOVA-ECLIPSE-2025-SEC-A-AS-04",
+        "fecha": "2025-11-15T20:30:00",
+        "recinto": "Estadio Ejemplo",
+        "seccion": "A",
+        "asiento": 4,
+        "titular": "Ana Ejemplo",
+        "id_titular_parcial": "****1234",
+        "id_titular_hash": "a3f2c8e1b9d4f6a7c5e8b2d9f1a3c6e8",
+        "folio": "280423-28",
+        "politica": "Nominativo e intransferible. Reembolso hasta 48h antes."
+      }
+    },
+    {
+      "id": "seguro_auto_01",
+      "sector": "seguros",
+      "descripcion": "Calcomanía en parabrisas - Datos del seguro vehicular",
+      "capa_publica": {
+        "tipo": "VEHICULO_ASEGURADO",
+        "instruccion": "Llame al 911 o use App AuraHash Reader",
+        "id_visual": "A3F2-C8E1"
+      },
+      "capa_medica": null,
+      "capa_administrativa": {
+        "asegurado": "Ana Ejemplo",
+        "vehiculo": "Nissan Versa 2020",
+        "placas": "ABC-123-D",
+        "aseguradora": "GNP Seguros",
+        "poliza": "GNP-2024-123456789-A",
+        "cobertura": "Amplia",
+        "deducible_mxn": 5000,
+        "tel_aseguradora": "800-400-9000",
+        "ajustador_asignado": {
+          "nombre": "Juan Pérez",
+          "telefono": "+52 55 9999 0000"
+        }
+      }
+    }
+  ]
+}
