@@ -2,10 +2,8 @@
 keys/*.pem
 keys/*.key
 keys/*.p12
+!keys/ed25519_public.key
 *.pem
-*.key
-.env
-.env.*
 
 # === IMÁGENES GENERADAS (se regeneran, no se suben) ===
 output/*.png

@@ -1,5 +1,5 @@
 """
-AuraHash ID - Generador Universal v2.3.0
+AuraHash ID - Generador Universal v2.4.0
 ==========================================
 
 Este script lee un archivo JSON con escenarios organizados en 3 capas:
@@ -11,6 +11,7 @@ Para cada escenario genera una imagen AuraHash con:
   - Un codigo Data Matrix real (ISO/IEC 16022), escaneable por Google Lens.
   - Un "Aura Estocastica" (patron de ruido determinista) alrededor.
   - Los hashes SHA-256 de cada capa visibles/embebidos para verificacion.
+  - Una firma digital Ed25519 sobre el payload completo (integridad end-to-end).
 
 Cifrado:
   - AES-256-GCM (cifrado autenticado: confidencialidad + integridad).
@@ -22,7 +23,17 @@ Cifrado:
         "AES256GCM:"  + base64(nonce(12) || AES-GCM(texto) || tag(16))
   - La capa publica NUNCA se cifra (es info de emergencia).
 
-Optimizaciones v2.2.0/v2.3.0 (pendiente #5):
+Firma digital (v2.4.0, pendiente #5):
+  - Ed25519 sobre el mensaje:
+        "PUB:{pub}|MED:{med}|ADM:{adm}|SHA:{sha}"
+    (NO se firma el bloque SIG: para evitar recursion).
+  - Llave privada en keys/ed25519_private.key (32 bytes, NUNCA va a git).
+  - Llave publica en keys/ed25519_public.key  (32 bytes, SI va a git).
+  - Firma (64 bytes) codificada en base64 y anexada al final:
+        "...|SIG:{base64(64 bytes)}"
+  - Si no existen llaves, el payload se genera SIN firma (retrocompatible).
+
+Optimizaciones v2.2.0/v2.3.0 (pendiente #4):
   - La capa publica se MINIFICA (claves cortas). Sigue legible por Google Lens.
   - El SHA maestro en payload se trunca a 32 hex (128 bits).
     El hash completo (64 hex) se sigue usando para el Aura interna.
@@ -35,6 +46,7 @@ Uso:
 Entrada:
     data/example_data.json
     keys/aes.key
+    keys/ed25519_private.key   (opcional; si falta, se omite la firma)
 
 Salida:
     output/aura_<id_escenario>.png
@@ -52,6 +64,7 @@ import numpy as np
 import segno
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
 # =====================================================================
@@ -62,6 +75,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_FILE = BASE_DIR / "data" / "example_data.json"
 OUTPUT_DIR = BASE_DIR / "output"
 KEY_FILE = BASE_DIR / "keys" / "aes.key"
+ED25519_PRIV_FILE = BASE_DIR / "keys" / "ed25519_private.key"
 
 # Cifrado AES-256-GCM
 AES_KEY_BYTES = 32
@@ -156,6 +170,38 @@ def cifrar_capa(texto: str) -> str:
     b64 = base64.b64encode(paquete).decode("ascii")
 
     return PREFIJO_CIFRADO_ZLIB + b64
+
+
+# =====================================================================
+# FIRMA DIGITAL ED25519
+# =====================================================================
+
+def cargar_llave_ed25519_privada():
+    """
+    Carga la llave privada Ed25519 desde keys/ed25519_private.key.
+    Devuelve el objeto Ed25519PrivateKey, o None si el archivo no existe.
+    """
+    if not ED25519_PRIV_FILE.exists():
+        return None
+    priv_bytes = ED25519_PRIV_FILE.read_bytes()
+    if len(priv_bytes) != 32:
+        raise ValueError(
+            f"La llave privada Ed25519 debe tener 32 bytes, "
+            f"pero tiene {len(priv_bytes)}."
+        )
+    return Ed25519PrivateKey.from_private_bytes(priv_bytes)
+
+
+def firmar_payload(mensaje: str, priv_key) -> str:
+    """
+    Firma 'mensaje' (str utf-8) con Ed25519 y devuelve "SIG:{base64}".
+    Si priv_key es None, devuelve cadena vacia (sin firma).
+    """
+    if priv_key is None:
+        return ""
+    firma_bytes = priv_key.sign(mensaje.encode("utf-8"))  # 64 bytes
+    b64 = base64.b64encode(firma_bytes).decode("ascii")
+    return f"|SIG:{b64}"
 
 
 # =====================================================================
@@ -364,11 +410,12 @@ def serializar_capa(capa) -> str:
 # PROCESAR UN ESCENARIO
 # =====================================================================
 
-def procesar_escenario(escenario: dict) -> Path:
+def procesar_escenario(escenario: dict, priv_key) -> Path:
     """
     Procesa un unico escenario (3 capas) y devuelve la ruta PNG.
     Aplica AES-256-GCM + zlib a capa_medica y capa_administrativa.
     La capa_publica se minifica (claves cortas) pero sigue en claro.
+    Firma el payload completo con Ed25519 si priv_key esta disponible.
     """
     id_escenario = escenario["id"]
     sector = escenario.get("sector", "general")
@@ -408,14 +455,17 @@ def procesar_escenario(escenario: dict) -> Path:
     # 6. Aura usando el hash maestro COMPLETO
     aura = generar_aura(hash_maestro, AURA_SIZE)
 
-    # 7. Contenido del Data Matrix v2.3.0
+    # 7. Construir payload v2.4.0 con firma Ed25519
     sha_payload = hash_maestro[:SHA_PAYLOAD_HEX]
-    contenido_dm = (
+    mensaje_a_firmar = (
         f"PUB:{json_publica}"
         f"|MED:{json_medica}"
         f"|ADM:{json_admin}"
         f"|SHA:{sha_payload}"
     )
+    bloque_sig = firmar_payload(mensaje_a_firmar, priv_key)
+    contenido_dm = mensaje_a_firmar + bloque_sig
+
     data_matrix = generar_data_matrix(contenido_dm, DM_SIZE)
 
     # 8. Componer imagen final
@@ -441,8 +491,8 @@ def procesar_escenario(escenario: dict) -> Path:
 
 def main() -> None:
     print("=" * 60)
-    print("  AuraHash ID - Generador Universal v2.3.0")
-    print("  (AES-256-GCM + zlib + PUB minificada + SHA truncado)")
+    print("  AuraHash ID - Generador Universal v2.4.0")
+    print("  (AES-256-GCM + zlib + PUB minif + SHA32 + Ed25519)")
     print("=" * 60)
     print()
 
@@ -455,6 +505,18 @@ def main() -> None:
         print(f"[INFO] Clave AES cargada: {KEY_FILE.name} ({AES_KEY_BYTES} bytes)")
     except (FileNotFoundError, ValueError) as e:
         print(f"[ERROR] Problema con la clave AES:\n{e}")
+        return
+
+    priv_key = None
+    try:
+        priv_key = cargar_llave_ed25519_privada()
+        if priv_key is not None:
+            print(f"[INFO] Llave Ed25519 privada cargada: {ED25519_PRIV_FILE.name}")
+        else:
+            print("[AVISO] No hay llave Ed25519 privada. Payload se generara SIN firma.")
+            print(f"        Generala con: python src/keys_manager.py")
+    except ValueError as e:
+        print(f"[ERROR] Problema con la llave Ed25519:\n{e}")
         return
 
     with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -472,7 +534,7 @@ def main() -> None:
     for i, escenario in enumerate(escenarios, start=1):
         print(f"[{i}/{len(escenarios)}] Procesando: {escenario['id']} ({escenario['sector']})")
         try:
-            ruta = procesar_escenario(escenario)
+            ruta = procesar_escenario(escenario, priv_key)
             resultados.append((escenario["id"], ruta))
             print(f"        OK Generado: {ruta.name}")
         except Exception as e:

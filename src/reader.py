@@ -1,21 +1,31 @@
 """
-AuraHash ID - Reader (v1.2.0)
+AuraHash ID - Reader (v1.3.0)
 ==============================
 
 Lee un payload AuraHash (el texto que devuelve escanear el Data Matrix),
 descifra las capas medica y administrativa con AES-256-GCM,
-verifica la integridad con SHA-256 y muestra todo formateado.
+verifica la integridad con SHA-256, verifica la firma digital Ed25519
+(si esta presente) y muestra todo formateado.
 
 Uso:
     python src/reader.py
 
 Flujo:
     1. El script te pide pegar el payload escaneado.
-    2. Lo parte en bloques PUB:, MED:, ADM:, SHA:.
+    2. Lo parte en bloques PUB:, MED:, ADM:, SHA:, SIG:.
     3. Descifra MED: y ADM: con keys/aes.key (soporta zlib y sin zlib).
     4. Reconstruye la capa publica (desminifica claves cortas).
     5. Verifica el hash maestro (SHA-256 completo o truncado).
-    6. Imprime todo con formato legible.
+    6. Verifica la firma Ed25519 con keys/ed25519_public.key si existe.
+    7. Imprime todo con formato legible.
+
+Cambios v1.3.0:
+    - Verifica firma Ed25519 sobre el mensaje "PUB|MED|ADM|SHA".
+    - La firma es INFORMATIVA, no bloqueante: nunca revienta el reader.
+    - Casos manejados:
+        * Con SIG y llave publica disponible -> "FIRMA OK" / "FIRMA FALLO"
+        * Sin SIG -> "(payload sin firma, formato legacy)"
+        * Con SIG pero sin llave publica -> "[AVISO] No hay llave publica"
 
 Cambios v1.2.0:
     - Soporta prefijos "AES256GCMZ:" (zlib, v2.3.0) y "AES256GCM:" (sin zlib, legacy).
@@ -34,6 +44,8 @@ import zlib
 from pathlib import Path
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.exceptions import InvalidSignature
 
 
 # =====================================================================
@@ -42,6 +54,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 KEY_FILE = BASE_DIR / "keys" / "aes.key"
+ED25519_PUB_FILE = BASE_DIR / "keys" / "ed25519_public.key"
 
 AES_KEY_BYTES = 32
 GCM_NONCE_BYTES = 12
@@ -73,6 +86,26 @@ def cargar_clave_aes() -> bytes:
             f"La clave AES debe tener {AES_KEY_BYTES} bytes, tiene {len(clave)}."
         )
     return clave
+
+
+# =====================================================================
+# LLAVE PUBLICA ED25519
+# =====================================================================
+
+def cargar_llave_ed25519_publica():
+    """
+    Carga la llave publica Ed25519 desde keys/ed25519_public.key.
+    Devuelve un Ed25519PublicKey, o None si el archivo no existe.
+    Lanza ValueError si el archivo existe pero no tiene 32 bytes.
+    """
+    if not ED25519_PUB_FILE.exists():
+        return None
+    pub_bytes = ED25519_PUB_FILE.read_bytes()
+    if len(pub_bytes) != 32:
+        raise ValueError(
+            f"La llave publica Ed25519 debe tener 32 bytes, tiene {len(pub_bytes)}."
+        )
+    return Ed25519PublicKey.from_public_bytes(pub_bytes)
 
 
 # =====================================================================
@@ -138,10 +171,11 @@ def desminificar_capa_publica(capa: dict) -> dict:
 
 def parsear_payload(payload: str) -> dict:
     """
-    Parte el payload en bloques: PUB, MED, ADM, SHA.
-    Formato esperado: PUB:...|MED:...|ADM:...|SHA:...
+    Parte el payload en bloques: PUB, MED, ADM, SHA, SIG.
+    Formato esperado: PUB:...|MED:...|ADM:...|SHA:...|SIG:...
+    El bloque SIG es opcional (payloads legacy no lo tienen).
     """
-    bloques = {"PUB": "", "MED": "", "ADM": "", "SHA": ""}
+    bloques = {"PUB": "", "MED": "", "ADM": "", "SHA": "", "SIG": ""}
 
     partes = payload.strip().split("|")
     for parte in partes:
@@ -153,6 +187,58 @@ def parsear_payload(payload: str) -> dict:
             bloques[prefijo] = contenido
 
     return bloques
+
+
+# =====================================================================
+# VERIFICACION DE FIRMA ED25519
+# =====================================================================
+
+def verificar_firma(bloques: dict) -> str:
+    """
+    Verifica la firma Ed25519 del payload (si esta presente).
+
+    Reglas:
+        - Sin SIG -> "(payload sin firma, formato legacy)"
+        - Con SIG pero sin llave publica -> "[AVISO] No hay llave publica"
+        - Con SIG y llave publica -> "FIRMA OK" o "FIRMA FALLO"
+
+    NUNCA lanza excepcion. Devuelve un string con el resultado.
+    """
+    sig_b64 = bloques.get("SIG", "")
+    if not sig_b64:
+        return "(payload sin firma, formato legacy)"
+
+    # Reconstruir el mensaje firmado: PUB|MED|ADM|SHA (sin SIG)
+    mensaje = (
+        f"PUB:{bloques['PUB']}"
+        f"|MED:{bloques['MED']}"
+        f"|ADM:{bloques['ADM']}"
+        f"|SHA:{bloques['SHA']}"
+    )
+
+    try:
+        pub_key = cargar_llave_ed25519_publica()
+    except ValueError as e:
+        return f"[AVISO] Llave publica invalida: {e}"
+
+    if pub_key is None:
+        return "[AVISO] No hay llave publica (keys/ed25519_public.key)"
+
+    try:
+        firma_bytes = base64.b64decode(sig_b64)
+    except Exception as e:
+        return f"FIRMA FALLO (base64 invalido: {e})"
+
+    if len(firma_bytes) != 64:
+        return f"FIRMA FALLO (longitud incorrecta: {len(firma_bytes)} bytes, esperado 64)"
+
+    try:
+        pub_key.verify(firma_bytes, mensaje.encode("utf-8"))
+        return "FIRMA OK"
+    except InvalidSignature:
+        return "FIRMA FALLO (la firma no coincide con el contenido)"
+    except Exception as e:
+        return f"FIRMA FALLO (error inesperado: {e})"
 
 
 # =====================================================================
@@ -180,7 +266,7 @@ def imprimir_dict(d: dict, indent: int = 2) -> None:
 def mostrar_payload(bloques: dict) -> None:
     print()
     print("=" * 60)
-    print("  AuraHash ID - Reader v1.2.0")
+    print("  AuraHash ID - Reader v1.3.0")
     print("=" * 60)
 
     # --- CAPA PUBLICA ---
@@ -220,7 +306,7 @@ def mostrar_payload(bloques: dict) -> None:
     else:
         print("  (vacia)")
 
-    # --- INTEGRIDAD ---
+    # --- INTEGRIDAD SHA-256 ---
     imprimir_seccion("INTEGRIDAD (SHA-256)")
     if bloques["SHA"]:
         print(f"  Hash en payload : {bloques['SHA']}")
@@ -253,6 +339,16 @@ def mostrar_payload(bloques: dict) -> None:
     else:
         print("  (no hay hash en el payload)")
 
+    # --- FIRMA DIGITAL ED25519 ---
+    imprimir_seccion("FIRMA DIGITAL (Ed25519)")
+    if bloques["SIG"]:
+        print(f"  Firma en payload: {bloques['SIG'][:32]}...")
+        print(f"  Longitud firma  : {len(bloques['SIG'])} caracteres (base64)")
+    else:
+        print("  (no hay firma en el payload)")
+    resultado = verificar_firma(bloques)
+    print(f"  Estado          : {resultado}")
+
 
 # =====================================================================
 # PRINCIPAL
@@ -261,7 +357,7 @@ def mostrar_payload(bloques: dict) -> None:
 def main() -> None:
     print()
     print("Pega el payload escaneado (una sola linea) y pulsa Enter:")
-    print("(Ejemplo: PUB:{...}|MED:AES256GCMZ:...|ADM:AES256GCMZ:...|SHA:...)")
+    print("(Ejemplo: PUB:{...}|MED:AES256GCMZ:...|ADM:AES256GCMZ:...|SHA:...|SIG:...)")
     print()
 
     try:
