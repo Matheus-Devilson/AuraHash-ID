@@ -270,4 +270,58 @@ Si un organizador se acerca interesado, estas son las preguntas que debería res
 
 ---
 
-*Última actualización: 2026-10-15 — Pendiente #13 (flujo de eventos)*
+## 9. Otros verticales (munición extra para el presentador)
+
+Este documento está enfocado en **eventos**. Pero AuraHash ID es un protocolo universal. Si en la sesión de Q&A te preguntan por otros sectores, aquí tienes munición rápida.
+
+Para el detalle completo, ver [`VISION.md`](VISION.md).
+
+### 9.1 — Militar y defensa
+
+En guerra, la conectividad es lo primero que se pierde. AuraHash ID funciona donde todo lo demás falla: sin red, sin servidores, sin energía, sin GPS.
+
+- **Identificación de tropa:** dog tags del siglo XXI. Capa pública (nombre, tipo de sangre, alergias) + capa médica cifrada (historial completo).
+- **Órdenes cifradas:** firmadas con Ed25519 por el comandante. Verificables offline. El enemigo no puede falsificarlas.
+- **Documentos clasificados:** capa pública señuelo + capa administrativa cifrada real. Si el enemigo captura el documento, solo ve el señuelo.
+- **Logística:** trazabilidad total de suministros. Cada movimiento firmado. Sin backend.
+- **MEDEVAC:** historial médico en 2 segundos. El médico de campo escanea y sabe qué hacer.
+- **Comunicaciones:** mensajes cifrados sin radio. El enemigo intercepta y solo ve base64.
+
+### 9.2 — Aviación comercial
+
+- **Boleto con Aura Dinámica:** rotación cada 30s. Imposible fotografiar y revender.
+- **Lista firmada offline:** si el sistema central cae, el abordaje continúa.
+- **Perfil salud embebido:** emergencias a 10,000 m con atención inmediata.
+- **Trazabilidad de equipaje:** cualquier aerolínea del mundo lee la capa pública.
+- **Interline entre aerolíneas:** payload universal, sin integración de sistemas.
+
+### 9.3 — Salud
+
+- **Paciente crónico en viaje:** pulsera con Data Matrix. Cualquier médico del mundo lee alergias, medicación y condiciones.
+- **Vacunación masiva:** certificado con firma Ed25519 del ministerio. Verificable en cualquier frontera sin internet.
+- **Hospital de campaña:** sin internet. El personal escanea y ve historial.
+- **Donación de órganos:** compatibilidad verificable offline.
+- **Ensayo clínico:** cada paciente lleva su ID con capa administrativa cifrada. Solo el investigador principal descifra.
+
+### 9.4 — Gobierno
+
+- **Identificación ciudadana:** capa pública visible, capa administrativa cifrada.
+- **Licencia de conducir:** con capa médica y administrativa.
+- **Programas sociales:** beneficiario escanea y ve si es elegible. Sin backend.
+- **Votación:** credencial con firma Ed25519 del INE. Verificable offline en casilla.
+- **Aduanas:** declaración de bienes cifrada. Solo el agente aduanal con llave la descifra.
+
+### 9.5 — Autenticación de productos
+
+- **Obras de arte:** Data Matrix con certificado de autenticidad firmado por el artista.
+- **Vinos y licores:** Data Matrix con añada, bodega, certificado. Anti-falsificación.
+- **Medicamentos:** Data Matrix con lote, caducidad, composición. Verificable offline en farmacia.
+- **Joyería y relojes de lujo:** Data Matrix con quilates, origen, certificado.
+
+### 9.6 — Cómo cerrar si preguntan por otros sectores
+
+> "AuraHash ID no es un producto de eventos. Es un protocolo universal de confianza offline. Eventos es nuestro primer vertical porque el dolor es evidente y medible. Pero la misma arquitectura resuelve militar, aviación, salud, gobierno y autenticación de productos. En todos los casos, el principio es el mismo: el dato vive en el código, no en un servidor. Y la confianza viene de la criptografía, no de una conexión."
+
+---
+
+*Última actualización: 2026-10-15 — Pendiente #13 (flujo de eventos) + sección 9 (otros verticales)*
