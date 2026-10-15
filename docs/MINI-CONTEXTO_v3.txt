@@ -1,0 +1,169 @@
+=== MINI-CONTEXTO PARA RETOMAR PROYECTO ===
+
+PROYECTO: AuraHash ID
+RUTA: C:\Users\erasn\Proyectos\AuraHash-ID
+HEAD: 9c31f9b
+GITHUB: https://github.com/Matheus-Devilson/AuraHash-ID (privado)
+
+--- HISTORICO (NO HEREDAR METRICAS) ---
+Chat previo cerro en N1 (75%). Volumen alto. No heredar metricas.
+Este chat nuevo empieza en N1 (0-25%).
+
+--- VISION DEL PROYECTO ---
+AuraHash ID es un protocolo universal de identificacion fisica-digital. Combina:
+- Nucleo: Data Matrix (ISO/IEC 16022) legible por Google Lens, WeChat, camaras nativas.
+- Seguridad Visual: "Aura Estocastica" (ruido determinista via SHA-256), efecto avalancha.
+- Criptografia: AES-256-GCM + zlib en capas sensibles. Ed25519 pendiente.
+Filosofia: 100% Offline-First. Privacidad por Diseno. Cero dependencia de servidores en lectura.
+
+--- ARQUITECTURA DE DATOS (3 CAPAS) ---
+- capa_publica: JSON MINIFICADO (claves cortas), visible con Google Lens. Cero datos sensibles.
+- capa_medica: Datos de salud. zlib + AES-256-GCM al vuelo en generator.py.
+- capa_administrativa: Datos legales/financieros. zlib + AES-256-GCM.
+
+--- FORMATO DEL PAYLOAD (v2.3.0) ---
+PUB:{json_minificado}|MED:AES256GCMZ:{base64}|ADM:AES256GCMZ:{base64}|SHA:{32hex}
+
+Prefijos de cifrado:
+- "AES256GCMZ:" -> zlib + AES-256-GCM (formato actual v2.3.0)
+- "AES256GCM:"  -> solo AES-256-GCM (formato legacy v2.1.0, reader aun lo acepta)
+
+Mapa de claves cortas PUB (generator.MAPA_CLAVES_PUB):
+  tipo->t, instruccion->i, nombre_pila->n, alergias_criticas->a,
+  id_visual->v, evento->e
+
+Mapa inverso en reader.MAPA_CLAVES_PUB_INV.
+
+--- ESTADO ACTUAL DEL MVP (v2.3.0) ---
+- 4 escenarios universales generados (salud, ciclista, eventos, seguro auto).
+- generator.py funcional:
+  - Data Matrix real (segno).
+  - Aura estocastica (numpy + Pillow).
+  - SHA-256 maestro de las 3 capas (64 chars internos para Aura).
+  - SHA truncado a 32 hex en payload.
+  - zlib + AES-256-GCM al vuelo de capas medica/admin.
+  - PUB minificado (claves cortas) antes de serializar.
+- reader.py funcional (v1.2.0):
+  - Pide payload por consola con input().
+  - Parsea bloques PUB/MED/ADM/SHA.
+  - Descifra MED y ADM con keys/aes.key (soporta zlib y legacy).
+  - Desminifica PUB para mostrarlo legible.
+  - Verifica integridad SHA-256 (completo o truncado).
+  - Imprime con formato legible.
+
+--- METRICAS DE OPTIMIZACION (pendiente #5 cerrado) ---
+- Payload v1 (original):        887 chars
+- Payload v2 (minif+SHA32):     808 chars (-8.9%)
+- Payload v3 (+zlib MED/ADM):   694 chars (-21.8%)
+Reduccion final: 21.8% sin romper promesas ni cripto.
+
+--- STACK TECNOLOGICO ---
+- Python 3.14.8
+- Librerias: segno, numpy, Pillow, cryptography 50.0.2, zlib (stdlib)
+- Entorno: VS Code + PowerShell + Git 2.55
+- Estructura:
+  aurahash-id/
+  ├── src/generator.py           # Motor v2.3.0 (zlib + AES-256-GCM)
+  ├── src/reader.py              # Lector/descifrador v1.2.0
+  ├── data/example_data.json     # 4 escenarios (texto plano legible)
+  ├── data/example_data_v1_OLD.json  # Backup antiguo (borrar si se quiere)
+  ├── output/                    # 4 PNG generados (ignorado por git)
+  ├── keys/aes.key               # Clave AES 32 bytes (ignorado por git)
+  ├── keys/.gitkeep
+  ├── docs/                      # Pendiente docs. Contiene MINI-CONTEXTO_v2/v3
+  ├── backups/                   # Backups locales (ignorado por git)
+  ├── .gitignore                 # Incluye payload_prueba*.txt
+  ├── README.md
+  └── requirements.txt
+
+--- PENDIENTES (orden recomendado) ---
+1. [CERRADO] Cifrado AES-256-GCM.
+2. [CERRADO] reader.py basico con input().
+3. [CERRADO] SHA completo (64 chars) en payload.
+4. [CERRADO] Optimizar payload: minificar PUB + SHA 32 + zlib MED/ADM. (cerrado en 9c31f9b)
+5. [ABIERTO] Firma digital Ed25519 (llave privada). Anade SIG: al payload.
+6. [ABIERTO] Crear docs/AI_CONTEXT.md con el "Prompt Maestro".
+7. [ABIERTO] Crear LICENSE (MIT).
+8. [ABIERTO] Actualizar README con arquitectura de 3 capas + cifrado + zlib.
+9. [ABIERTO] Limpiar example_data_v1_OLD.json del repo (opcional).
+10. [ABIERTO] Verificar y corregir src/.gitkeep (modificado sin razon).
+11. [ABIERTO] (Emergente) Recortar contenido de example_data.json si se
+    quiere bajar mas el payload. Decision de producto, no tecnica.
+    Ahorro estimado: ~6%. No urgente.
+
+--- NOTA SOBRE ED25519 (pendiente #5) ---
+El payload ya esta optimizado. Ed25519 anadira ~88 chars base64 + prefijo SIG:.
+Payload estimado tras Ed25519: ~790 chars.
+Ventaja: ahora es viable porque el payload ya bajo 21.8%.
+
+--- REGLAS OPERATIVAS ---
+- PowerShell 5.1: maximo 5-6 lineas por bloque pegado.
+- NUNCA pegar bloques largos (>30 lineas) en PowerShell: usar VS Code.
+- Si algo falla: Ctrl+C, comando de 1 linea.
+- Editar .md largos en VS Code, no en PowerShell.
+- Antes de cambios: Copy-Item [archivo] backups/[archivo]_ANTES_[fecha].
+- Verificar con Select-String o python -c despues de cada cambio.
+- Cero saludos, directo al grano.
+- Codigo completo, sin "...".
+- El usuario NO es programador profesional, guiarlo paso a paso con comandos exactos.
+- El usuario prefiere: editar archivos en VS Code, ejecutar comandos en PowerShell.
+- NUNCA pegar codigo Python directamente en PowerShell. Solo comandos del sistema.
+- Explicar terminos tecnicos brevemente cuando aparezcan.
+- REGLA NUEVA: commit + push despues de CADA pendiente terminado (no acumular).
+- REGLA NUEVA: usar Notepad como alternativa si VS Code esta lento.
+
+--- ESTADO DE HERRAMIENTAS ---
+- git status: working tree limpio (solo docs/MINI-CONTEXTO_v2.txt y output/ untracked).
+- HEAD: 9c31f9b.
+- VS Code: abierto en la carpeta del proyecto.
+- Python: 3.14.8 con segno, numpy, Pillow, cryptography 50.0.2, zlib.
+- PowerShell: en C:\Users\erasn\Proyectos\AuraHash-ID.
+
+=== MONITOR DE CONTEXTO (OBLIGATORIO AL FINAL DE CADA RESPUESTA) ===
+
+Bloque exacto:
+[Estado del Contexto]
+- Volumen: Bajo / Medio / Alto
+- Coherencia: OK / Degradada
+- Preparacion: N1 / N2 / N3 / N4 + %
+- Recomendacion: <frase exacta>
+- Senales activas: N (0-7)
+
+--- REGLAS DE COHERENCIA INTERNA (CRITICO) ---
+Las 4 metricas DEBEN ser coherentes entre si.
+- N1 Fresco:   0-25%   Volumen tipico: Bajo
+- N2 Estable:  26-50%  Volumen tipico: Bajo/Medio
+- N3 Cargado:  51-75%  Volumen tipico: Medio/Alto
+- N4 Saturado: 76-100% Volumen tipico: Alto
+
+--- FRASES EXACTAS ---
+- N1: Continuar sin pensar en migrar
+- N2: Continuar
+- N3: Considerar migrar (preparar contexto en paralelo)
+- N4 temprano (76-84%): Terminar tarea en curso y migrar en el proximo punto natural
+- N4 critico (85-89%): MIGRAR AHORA. Solo pedir contexto y cerrar.
+- N4 extremo (90-100%): MIGRAR AHORA. Chat saturado.
+
+--- SENALES DE DEGRADACION (contar 0-7) ---
+1. IA repite cosas ya dichas.
+2. IA olvida reglas establecidas.
+3. IA sugiere metodos ya probados y fallidos.
+4. IA mezcla contextos (proyectos o niveles).
+5. Usuario corrige a la IA cada 2-3 mensajes.
+6. Respuestas cada vez mas largas para lo mismo.
+7. IA inventa detalles (rutas, comandos, versiones, hashes).
+
+--- REGLA DURA ---
+- 0-1 senales: continuar normal.
+- 2-3 senales: migrar en el proximo punto natural.
+- 4+ senales: MIGRAR AHORA.
+
+--- CHECKLIST AL EMPEZAR (primer mensaje del nuevo chat) ---
+1. Confirmar HEAD: git log --oneline -1
+2. Confirmar working tree: git status
+3. Verificar estructura: Get-ChildItem -Recurse -Force | Select-Object FullName
+4. Leer este mini-contexto y confirmar entendimiento.
+5. Preguntar al usuario en que pendiente quiere trabajar.
+6. Recomendacion: empezar por #5 (Ed25519) porque el payload ya esta optimizado.
+
+=== FIN DEL MINI-CONTEXTO ===
