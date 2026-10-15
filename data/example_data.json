@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "version": "2.1.0",
-    "description": "AuraHash ID - Arquitectura de 3 capas + 4 perfiles de aplicacion",
+    "version": "2.4.1",
+    "description": "AuraHash ID - Arquitectura de 3 capas + 4 perfiles + 7 escenarios universales",
     "generated_by": "AuraHash-ID / data/example_data.json",
     "privacy_note": "capa_publica es visible con Google Lens. Las otras 2 iran cifradas en produccion.",
     "perfiles_disponibles": ["salud", "contacto", "verificacion", "legal"]
@@ -42,9 +42,7 @@
       "sector": "personal",
       "descripcion": "Ciclista herido en carretera a las 2 AM",
       "capa_publica": {
-        "perfil": "salud",
         "tipo": "EMERGENCIA_MEDICA",
-        "instruccion": "Llame al 911 inmediatamente",
         "nombre_pila": "Luis",
         "id_visual": "DF5F-4938"
       },
@@ -146,6 +144,36 @@
         "fecha_emision": "2026-10-15",
         "partes": ["Ana Ejemplo", "Luis Ejemplo"],
         "folio_notarial": "NOT45-2026-10234"
+      }
+    },
+    {
+      "id": "militar_inteligencia_01",
+      "sector": "militar",
+      "descripcion": "Documento clasificado - capa publica senuelo, capa administrativa cifrada real",
+      "capa_publica": {
+        "perfil": "legal",
+        "tipo": "DOCUMENTO_CLASIFICADO",
+        "instruccion": "Documento no clasificado. Uso publico autorizado.",
+        "evento": "Manual de operaciones estandar - Nivel 1",
+        "nombre_pila": "Comando",
+        "id_visual": "MIL1-7X4K"
+      },
+      "capa_medica": null,
+      "capa_administrativa": {
+        "clasificacion_real": "ULTRA_SECRETO",
+        "nombre_operacion": "TORMENTA_NOCTURNA",
+        "coordenadas_objetivo": "19.4326N, 99.1332W",
+        "fecha_hora_inicio": "2026-11-15T02:30:00Z",
+        "unidad": "Fuerzas Especiales - Grupo 7",
+        "objetivo": "Reconocimiento de infraestructura enemiga en sector norte",
+        "autorizado_por": "General J. Martinez",
+        "nivel_autorizacion": "ALPHA-7",
+        "reglas_enfrentamiento": "Solo defensa. No iniciar hostilidades.",
+        "punto_extraccion": "Coordenadas Charlie - 04:00Z",
+        "personal_asignado": 12,
+        "equipo_especial": ["Vision nocturna", "Comunicaciones satelitales", "Drones de reconocimiento"],
+        "codigo_emergencia": "SIGMA-9",
+        "contacto_extraccion": "Frecuencia 147.5 MHz - Codigo TANGO"
       }
     }
   ]
