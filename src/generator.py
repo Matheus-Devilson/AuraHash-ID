@@ -403,12 +403,12 @@ def procesar_escenario(escenario: dict) -> Path:
     #    - PUB: capa pública en claro (info de emergencia)
     #    - MED: capa médica cifrada con AES-256-GCM
     #    - ADM: capa administrativa cifrada con AES-256-GCM
-    #    - SHA: hash maestro truncado para verificación visual
+    #    - SHA: hash maestro completo (64 chars) para verificación de integridad
     contenido_dm = (
         f"PUB:{json_publica}"
         f"|MED:{json_medica}"
         f"|ADM:{json_admin}"
-        f"|SHA:{hash_maestro[:16]}"
+        f"|SHA:{hash_maestro}"
     )
     data_matrix = generar_data_matrix(contenido_dm, DM_SIZE)
 
