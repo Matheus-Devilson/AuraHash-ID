@@ -1,9 +1,10 @@
 {
   "_meta": {
-    "version": "2.0.0",
-    "description": "AuraHash ID - Arquitectura de 3 capas por sector",
+    "version": "2.1.0",
+    "description": "AuraHash ID - Arquitectura de 3 capas + 4 perfiles de aplicacion",
     "generated_by": "AuraHash-ID / data/example_data.json",
-    "privacy_note": "capa_publica es visible con Google Lens. Las otras 2 iran cifradas en produccion."
+    "privacy_note": "capa_publica es visible con Google Lens. Las otras 2 iran cifradas en produccion.",
+    "perfiles_disponibles": ["salud", "contacto", "verificacion", "legal"]
   },
   "escenarios": [
     {
@@ -11,6 +12,7 @@
       "sector": "salud",
       "descripcion": "Pulsera de emergencia para paciente con alergias criticas",
       "capa_publica": {
+        "perfil": "salud",
         "tipo": "EMERGENCIA_MEDICA",
         "instruccion": "Llame al 911 o contacte a familiar",
         "nombre_pila": "Ana",
@@ -34,11 +36,13 @@
         "tel_aseguradora": "800-400-9000",
         "donante_organos": "SI"
       }
-    },    {
+    },
+    {
       "id": "personal_ciclista_01",
       "sector": "personal",
       "descripcion": "Ciclista herido en carretera a las 2 AM",
       "capa_publica": {
+        "perfil": "salud",
         "tipo": "EMERGENCIA_MEDICA",
         "instruccion": "Llame al 911 inmediatamente",
         "nombre_pila": "Luis",
@@ -64,6 +68,7 @@
       "sector": "eventos",
       "descripcion": "Boleto nominativo para concierto",
       "capa_publica": {
+        "perfil": "verificacion",
         "tipo": "BOLETO_EVENTO",
         "instruccion": "Escanee con Google Lens para verificar",
         "evento": "NOVA: Eclipse World Tour",
@@ -77,11 +82,13 @@
         "asiento": 4,
         "folio": "280423-28"
       }
-    },    {
+    },
+    {
       "id": "seguro_auto_01",
       "sector": "seguros",
       "descripcion": "Calcomania en parabrisas - Seguro vehicular",
       "capa_publica": {
+        "perfil": "verificacion",
         "tipo": "VEHICULO_ASEGURADO",
         "instruccion": "Llame al 911 o use App AuraHash Reader",
         "id_visual": "A3F2-C8E1"
@@ -96,6 +103,49 @@
         "cobertura": "Amplia",
         "deducible_mxn": 5000,
         "tel_aseguradora": "800-400-9000"
+      }
+    },
+    {
+      "id": "contacto_nino_01",
+      "sector": "personal",
+      "descripcion": "Pulsera de nino con autismo - contacto familiar inmediato",
+      "capa_publica": {
+        "perfil": "contacto",
+        "tipo": "CONTACTO_FAMILIAR",
+        "instruccion": "Soy autista. Puedo no responder. Contacte a mi familia.",
+        "nombre_pila": "Diego",
+        "evento": "Comunicacion limitada - hable despacio",
+        "id_visual": "F1D8-7B92"
+      },
+      "capa_medica": null,
+      "capa_administrativa": {
+        "tutor_nombre": "Maria Ejemplo",
+        "tutor_parentesco": "Madre",
+        "tutor_telefono": "+52-55-1234-5678",
+        "tutor_telefono_alt": "+52-55-8765-4321",
+        "notas": "Diego es no verbal. Prefiere ambiente tranquilo."
+      }
+    },
+    {
+      "id": "legal_contrato_01",
+      "sector": "legal",
+      "descripcion": "Certificacion al calce de contrato notarial",
+      "capa_publica": {
+        "perfil": "legal",
+        "tipo": "CERTIFICACION_LEGAL",
+        "instruccion": "Verifique integridad del documento con AuraHash Reader",
+        "evento": "Contrato de compraventa - Notaria 45 CDMX",
+        "id_visual": "C4A1-9F3D"
+      },
+      "capa_medica": null,
+      "capa_administrativa": {
+        "hash_documento": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "emisor": "Notaria Publica No. 45 - CDMX",
+        "notario": "Lic. Roberto Ejemplo",
+        "tipo_acto": "Compraventa",
+        "fecha_emision": "2026-10-15",
+        "partes": ["Ana Ejemplo", "Luis Ejemplo"],
+        "folio_notarial": "NOT45-2026-10234"
       }
     }
   ]

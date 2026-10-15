@@ -1,11 +1,12 @@
 """
-AuraHash ID - Reader (v1.3.0)
+AuraHash ID - Reader (v1.4.0)
 ==============================
 
 Lee un payload AuraHash (el texto que devuelve escanear el Data Matrix),
 descifra las capas medica y administrativa con AES-256-GCM,
 verifica la integridad con SHA-256, verifica la firma digital Ed25519
-(si esta presente) y muestra todo formateado.
+(si esta presente), detecta el perfil de AuraHash (salud/contacto/
+verificacion/legal) y muestra todo formateado.
 
 Uso:
     python src/reader.py
@@ -17,7 +18,13 @@ Flujo:
     4. Reconstruye la capa publica (desminifica claves cortas).
     5. Verifica el hash maestro (SHA-256 completo o truncado).
     6. Verifica la firma Ed25519 con keys/ed25519_public.key si existe.
-    7. Imprime todo con formato legible.
+    7. Detecta el perfil y lo muestra en la cabecera.
+    8. Imprime todo con formato legible.
+
+Cambios v1.4.0:
+    - Muestra el "perfil" de AuraHash (salud/contacto/verificacion/legal)
+      detectado en la capa PUB. Si no esta, muestra "(no declarado)".
+    - MAPA_CLAVES_PUB_INV incluye "p" -> "perfil".
 
 Cambios v1.3.0:
     - Verifica firma Ed25519 sobre el mensaje "PUB|MED|ADM|SHA".
@@ -63,6 +70,7 @@ PREFIJO_CIFRADO_ZLIB = "AES256GCMZ:"  # v2.3.0, con zlib
 
 # Mapa inverso al de generator.py: clave corta -> clave larga
 MAPA_CLAVES_PUB_INV = {
+    "p": "perfil",
     "t": "tipo",
     "i": "instruccion",
     "n": "nombre_pila",
@@ -263,10 +271,31 @@ def imprimir_dict(d: dict, indent: int = 2) -> None:
         print(" " * indent + f"{k:<{ancho}} : {v_str}")
 
 
+def extraer_perfil(bloques: dict) -> str:
+    """
+    Extrae el campo 'perfil' de la capa publica (PUB) si esta presente.
+    Acepta tanto 'perfil' (clave larga) como 'p' (clave corta minificada).
+    Devuelve el perfil en minusculas, o '(no declarado)' si falta.
+    """
+    if not bloques.get("PUB"):
+        return "(no declarado)"
+    try:
+        d = json.loads(bloques["PUB"])
+        perfil = d.get("perfil") or d.get("p")
+        if isinstance(perfil, str) and perfil:
+            return perfil.lower()
+    except (json.JSONDecodeError, AttributeError):
+        pass
+    return "(no declarado)"
+
+
 def mostrar_payload(bloques: dict) -> None:
+    perfil = extraer_perfil(bloques)
+
     print()
     print("=" * 60)
-    print("  AuraHash ID - Reader v1.3.0")
+    print("  AuraHash ID - Reader v1.4.0")
+    print(f"  Perfil: {perfil}")
     print("=" * 60)
 
     # --- CAPA PUBLICA ---

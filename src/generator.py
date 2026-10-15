@@ -1,5 +1,5 @@
 """
-AuraHash ID - Generador Universal v2.4.0
+AuraHash ID - Generador Universal v2.4.1
 ==========================================
 
 Este script lee un archivo JSON con escenarios organizados en 3 capas:
@@ -12,6 +12,13 @@ Para cada escenario genera una imagen AuraHash con:
   - Un "Aura Estocastica" (patron de ruido determinista) alrededor.
   - Los hashes SHA-256 de cada capa visibles/embebidos para verificacion.
   - Una firma digital Ed25519 sobre el payload completo (integridad end-to-end).
+
+Perfiles:
+  - salud:        Emergencias medicas. PUB + MED + ADM.
+  - contacto:     Ninos/mascotas/adultos mayores. PUB solo.
+  - verificacion: Boletos/activos con estado. PUB + ADM.
+  - legal:        Contratos/certificaciones. PUB + ADM.
+  El perfil va dentro de capa_publica y se minifica como "p".
 
 Cifrado:
   - AES-256-GCM (cifrado autenticado: confidencialidad + integridad).
@@ -39,6 +46,9 @@ Optimizaciones v2.2.0/v2.3.0 (pendiente #4):
     El hash completo (64 hex) se sigue usando para el Aura interna.
   - MED y ADM se comprimen con zlib antes de cifrar (v2.3.0).
   - MED y ADM NO se debilitan: mismo AES-256-GCM, mismo nonce 12, mismo tag 16.
+
+Cambios v2.4.1:
+  - MAPA_CLAVES_PUB incluye "perfil": "p" (perfiles en capa_publica).
 
 Uso:
     python src/generator.py
@@ -110,6 +120,7 @@ AURA_PALETTE = [
 
 # --- Mapa de minificacion de la capa publica ---
 MAPA_CLAVES_PUB = {
+    "perfil": "p",
     "tipo": "t",
     "instruccion": "i",
     "nombre_pila": "n",
@@ -194,7 +205,7 @@ def cargar_llave_ed25519_privada():
 
 def firmar_payload(mensaje: str, priv_key) -> str:
     """
-    Firma 'mensaje' (str utf-8) con Ed25519 y devuelve "SIG:{base64}".
+    Firma 'mensaje' (str utf-8) con Ed25519 y devuelve "|SIG:{base64}".
     Si priv_key es None, devuelve cadena vacia (sin firma).
     """
     if priv_key is None:
@@ -491,8 +502,8 @@ def procesar_escenario(escenario: dict, priv_key) -> Path:
 
 def main() -> None:
     print("=" * 60)
-    print("  AuraHash ID - Generador Universal v2.4.0")
-    print("  (AES-256-GCM + zlib + PUB minif + SHA32 + Ed25519)")
+    print("  AuraHash ID - Generador Universal v2.4.1")
+    print("  (AES-256-GCM + zlib + PUB minif + SHA32 + Ed25519 + perfiles)")
     print("=" * 60)
     print()
 
@@ -532,7 +543,11 @@ def main() -> None:
 
     resultados = []
     for i, escenario in enumerate(escenarios, start=1):
-        print(f"[{i}/{len(escenarios)}] Procesando: {escenario['id']} ({escenario['sector']})")
+        perfil = "?"
+        capa_pub = escenario.get("capa_publica") or {}
+        if isinstance(capa_pub, dict):
+            perfil = capa_pub.get("perfil", "?")
+        print(f"[{i}/{len(escenarios)}] Procesando: {escenario['id']} ({escenario['sector']}) [perfil: {perfil}]")
         try:
             ruta = procesar_escenario(escenario, priv_key)
             resultados.append((escenario["id"], ruta))

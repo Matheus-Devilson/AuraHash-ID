@@ -30,3 +30,4 @@ Thumbs.db
 backups/
 payload_prueba.txt
 payload_prueba*.txt
+payload_test_*.txt
