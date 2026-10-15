@@ -42,6 +42,7 @@
       "sector": "personal",
       "descripcion": "Ciclista herido en carretera a las 2 AM",
       "capa_publica": {
+        "perfil": "salud",
         "tipo": "EMERGENCIA_MEDICA",
         "nombre_pila": "Luis",
         "id_visual": "DF5F-4938"
