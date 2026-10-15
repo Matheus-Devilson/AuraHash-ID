@@ -1,22 +1,29 @@
 """
-AuraHash ID — Generador Universal v2.0.0
+AuraHash ID — Generador Universal v2.1.0
 ==========================================
 
 Este script lee un archivo JSON con escenarios organizados en 3 capas:
   - capa_publica:         Visible con Google Lens. Cero datos sensibles.
-  - capa_medica:          Datos de salud (cifrado en producción).
-  - capa_administrativa:  Datos legales/financieros (cifrado en producción).
+  - capa_medica:          Datos de salud (cifrados AES-256-GCM al vuelo).
+  - capa_administrativa:  Datos legales/financieros (cifrados AES-256-GCM).
 
 Para cada escenario genera una imagen AuraHash con:
   - Un código Data Matrix real (ISO/IEC 16022), escaneable por Google Lens.
   - Un "Aura Estocástica" (patrón de ruido determinista) alrededor.
   - Los hashes SHA-256 de cada capa visibles/embebidos para verificación.
 
+Cifrado:
+  - AES-256-GCM (cifrado autenticado: confidencialidad + integridad).
+  - Clave maestra en keys/aes.key (32 bytes), ignorada por .gitignore.
+  - Formato del ciphertext: "AES256GCM:" + base64(nonce || ciphertext || tag).
+  - La capa pública NUNCA se cifra (es info de emergencia).
+
 Uso:
     python src/generator.py
 
 Entrada:
-    data/example_data.json
+    data/example_data.json   (texto plano, legible para editar)
+    keys/aes.key             (32 bytes, generado UNA vez)
 
 Salida:
     output/aura_<id_escenario>.png
@@ -25,11 +32,14 @@ Salida:
 import json
 import hashlib
 import io
+import base64
+import secrets
 from pathlib import Path
 
 import numpy as np
 import segno
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 # =====================================================================
@@ -40,6 +50,12 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_FILE = BASE_DIR / "data" / "example_data.json"
 OUTPUT_DIR = BASE_DIR / "output"
+KEY_FILE = BASE_DIR / "keys" / "aes.key"
+
+# Cifrado AES-256-GCM
+AES_KEY_BYTES = 32      # 32 bytes = 256 bits
+GCM_NONCE_BYTES = 12    # 96 bits, recomendado por NIST para GCM
+PREFIJO_CIFRADO = "AES256GCM:"
 
 # --- Dimensiones de la imagen final (en píxeles) ---
 IMG_WIDTH = 800
@@ -67,6 +83,57 @@ AURA_PALETTE = [
     (0, 255, 150),     # Verde menta
     (255, 180, 0),     # Ámbar dorado
 ]
+
+
+# =====================================================================
+# CIFRADO AES-256-GCM
+# =====================================================================
+
+def cargar_clave_aes() -> bytes:
+    """
+    Lee la clave AES de keys/aes.key y valida que sean 32 bytes.
+    Lanza FileNotFoundError o ValueError si algo está mal.
+    """
+    if not KEY_FILE.exists():
+        raise FileNotFoundError(
+            f"No se encontró la clave AES en: {KEY_FILE}\n"
+            f"Genérala con:\n"
+            f"  python -c \"import secrets, pathlib; "
+            f"pathlib.Path('keys').mkdir(exist_ok=True); "
+            f"pathlib.Path('keys/aes.key').write_bytes(secrets.token_bytes(32))\""
+        )
+    clave = KEY_FILE.read_bytes()
+    if len(clave) != AES_KEY_BYTES:
+        raise ValueError(
+            f"La clave AES debe tener {AES_KEY_BYTES} bytes, "
+            f"pero tiene {len(clave)}."
+        )
+    return clave
+
+
+def cifrar_capa(texto: str) -> str:
+    """
+    Cifra un texto con AES-256-GCM.
+
+    Devuelve un string con el formato:
+        "AES256GCM:" + base64(nonce(12) || ciphertext || tag(16))
+
+    Si el texto está vacío, devuelve cadena vacía (no se cifra nada).
+    """
+    if not texto:
+        return ""
+
+    clave = cargar_clave_aes()
+    aesgcm = AESGCM(clave)
+
+    nonce = secrets.token_bytes(GCM_NONCE_BYTES)
+    ciphertext_con_tag = aesgcm.encrypt(nonce, texto.encode("utf-8"), None)
+
+    paquete = nonce + ciphertext_con_tag
+    b64 = base64.b64encode(paquete).decode("ascii")
+
+    return PREFIJO_CIFRADO + b64
+
 
 # =====================================================================
 # FUNCIÓN: Generar el Aura Estocástica
@@ -186,6 +253,7 @@ def obtener_fuente(tamaño: int) -> ImageFont.ImageFont:
             continue
     return ImageFont.load_default()
 
+
 # =====================================================================
 # FUNCIÓN: Componer la imagen final
 # =====================================================================
@@ -200,7 +268,7 @@ def componer_imagen(
     """
     Compone la imagen final: fondo blanco + aura + data matrix + texto.
 
-    Ahora muestra el hash de la CAPA PÚBLICA (no de todo el payload)
+    Muestra el hash de la CAPA PÚBLICA (no de todo el payload)
     para reforzar el concepto de separación de capas.
     """
     # 1. Lienzo base blanco
@@ -291,12 +359,15 @@ def serializar_capa(capa) -> str:
 
 
 # =====================================================================
-# FUNCIÓN: Procesar un escenario individual (v2.0.0 - 3 capas)
+# FUNCIÓN: Procesar un escenario individual (v2.1.0 - 3 capas + AES-256-GCM)
 # =====================================================================
 
 def procesar_escenario(escenario: dict) -> Path:
     """
     Procesa un único escenario del JSON (con 3 capas) y devuelve la ruta PNG.
+
+    Aplica cifrado AES-256-GCM a capa_medica y capa_administrativa.
+    La capa_publica se mantiene en claro (info de emergencia).
     """
     # 1. Extraer datos
     id_escenario = escenario["id"]
@@ -307,24 +378,32 @@ def procesar_escenario(escenario: dict) -> Path:
 
     # 2. Serializar cada capa a JSON canónico
     json_publica = serializar_capa(capa_publica)
-    json_medica = serializar_capa(capa_medica)
-    json_admin = serializar_capa(capa_administrativa)
+    json_medica_plano = serializar_capa(capa_medica)
+    json_admin_plano = serializar_capa(capa_administrativa)
 
-    # 3. Calcular hash SHA-256 de cada capa
+    # 3. Cifrar capas sensibles con AES-256-GCM
+    json_medica = cifrar_capa(json_medica_plano)
+    json_admin = cifrar_capa(json_admin_plano)
+
+    # 4. Calcular hash SHA-256 de cada capa (sobre el texto plano original,
+    #    para que el hash sea verificable si se descifra)
     hash_publica = hashlib.sha256(json_publica.encode("utf-8")).hexdigest()
-    hash_medica = hashlib.sha256(json_medica.encode("utf-8")).hexdigest() if json_medica else ""
-    hash_admin = hashlib.sha256(json_admin.encode("utf-8")).hexdigest() if json_admin else ""
+    hash_medica = hashlib.sha256(json_medica_plano.encode("utf-8")).hexdigest() if json_medica_plano else ""
+    hash_admin = hashlib.sha256(json_admin_plano.encode("utf-8")).hexdigest() if json_admin_plano else ""
 
-    # 4. El hash "maestro" del escenario = hash de la concatenación de los 3 hashes
+    # 5. El hash "maestro" del escenario = hash de la concatenación de los 3 hashes
     hash_maestro = hashlib.sha256(
         (hash_publica + hash_medica + hash_admin).encode("utf-8")
     ).hexdigest()
 
-    # 5. Generar el Aura usando el hash maestro (determinista)
+    # 6. Generar el Aura usando el hash maestro (determinista)
     aura = generar_aura(hash_maestro, AURA_SIZE)
 
-    # 6. Contenido del Data Matrix: las 3 capas separadas por marcadores
-    #    En producción, las capas médica y admin irían cifradas aquí.
+    # 7. Contenido del Data Matrix:
+    #    - PUB: capa pública en claro (info de emergencia)
+    #    - MED: capa médica cifrada con AES-256-GCM
+    #    - ADM: capa administrativa cifrada con AES-256-GCM
+    #    - SHA: hash maestro truncado para verificación visual
     contenido_dm = (
         f"PUB:{json_publica}"
         f"|MED:{json_medica}"
@@ -333,7 +412,7 @@ def procesar_escenario(escenario: dict) -> Path:
     )
     data_matrix = generar_data_matrix(contenido_dm, DM_SIZE)
 
-    # 7. Componer imagen final
+    # 8. Componer imagen final
     imagen_final = componer_imagen(
         aura=aura,
         data_matrix=data_matrix,
@@ -342,7 +421,7 @@ def procesar_escenario(escenario: dict) -> Path:
         sector=sector,
     )
 
-    # 8. Guardar
+    # 9. Guardar
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     ruta_salida = OUTPUT_DIR / f"aura_{id_escenario}.png"
     imagen_final.save(ruta_salida, "PNG", optimize=True)
@@ -359,7 +438,7 @@ def main() -> None:
     Orquestador principal.
     """
     print("=" * 60)
-    print("  AuraHash ID — Generador Universal v2.0.0")
+    print("  AuraHash ID — Generador Universal v2.1.0 (AES-256-GCM)")
     print("=" * 60)
     print()
 
@@ -368,7 +447,15 @@ def main() -> None:
         print(f"[ERROR] No se encontró el archivo: {DATA_FILE}")
         return
 
-    # 2. Leer JSON
+    # 2. Verificar clave AES antes de procesar
+    try:
+        cargar_clave_aes()
+        print(f"[INFO] Clave AES cargada: {KEY_FILE.name} ({AES_KEY_BYTES} bytes)")
+    except (FileNotFoundError, ValueError) as e:
+        print(f"[ERROR] Problema con la clave AES:\n{e}")
+        return
+
+    # 3. Leer JSON
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         datos = json.load(f)
 
@@ -381,7 +468,7 @@ def main() -> None:
     print(f"[INFO] Salida: {OUTPUT_DIR}")
     print()
 
-    # 3. Procesar cada escenario
+    # 4. Procesar cada escenario
     resultados = []
     for i, escenario in enumerate(escenarios, start=1):
         print(f"[{i}/{len(escenarios)}] Procesando: {escenario['id']} ({escenario['sector']})")
@@ -392,7 +479,7 @@ def main() -> None:
         except Exception as e:
             print(f"        ERROR: {e}")
 
-    # 4. Resumen final
+    # 5. Resumen final
     print()
     print("=" * 60)
     print(f"  Generacion completada: {len(resultados)}/{len(escenarios)} imagenes")
