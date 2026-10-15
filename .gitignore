@@ -31,3 +31,4 @@ Thumbs.db
 # === BACKUPS LOCALES ===
 backups/
 payload_prueba.txt
+payload_prueba*.txt
