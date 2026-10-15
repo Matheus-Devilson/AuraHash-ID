@@ -51,6 +51,20 @@ AuraHash ID devuelve el control al **borde** (Edge Computing), llevando criptogr
 | 📜 **Documentos Legales** | Contratos, credenciales, certificados | Verificación de integridad sin servidor |
 | 🚴 **Seguridad Vial** | Cascos, vehículos, identificación médica | Datos vitales en accidentes |
 
+### Caso destacado: Eventos (anti-reventa y control del emisor)
+
+AuraHash ID convierte el boleto en un **activo controlado por el emisor** (modelo boleto aéreo):
+
+- **Vinculación a INE:** el boleto lleva `SHA-256(INE + nombre)`. La INE nunca viaja en claro.
+- **Anti-reventa:** sin la INE del titular original, el boleto no entra.
+- **Verificación offline-first:** las pistolas del staff descargan una lista firmada antes del evento y funcionan sin red.
+- **Verificación en 0.2s:** firma Ed25519 + hash de INE + estado del boleto.
+- **Reembolso configurable:** el emisor define política (ventana, cargo por cancelación tardía).
+- **Auditoría completa:** vendidos, cancelados, asistencia en tiempo real, intentos de fraude detectados.
+
+**Documentación detallada:**
+- [`docs/FLUJO_EVENTOS.md`](docs/FLUJO_EVENTOS.md) — Flujo end-to-end.
+- [`docs/VISION_COMERCIAL.md`](docs/VISION_COMERCIAL.md) — Speech y Q&A para presentaciones.
 ---
 
 ## 🏗️ Arquitectura de Datos (3 Capas)

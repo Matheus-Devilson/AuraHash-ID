@@ -169,13 +169,49 @@ Al trabajar en este proyecto, respetar:
 
 ---
 
-## 10. Referencias
+## 10. Modelo de negocio y flujo de eventos
+
+AuraHash ID no es un producto cerrado. Es un **protocolo abierto (MIT)** que cualquier emisor (hospital, empresa, promotor) puede adoptar. El valor no está en el software, está en la **arquitectura criptográfica** que resuelve problemas concretos.
+
+### 10.1 — Sector eventos (caso de referencia)
+
+El flujo completo está en `docs/FLUJO_EVENTOS.md`. Resumen:
+
+- **Principio:** el boleto es un activo **controlado por el emisor**, no propiedad absoluta del comprador (modelo boleto aéreo).
+- **Vinculación:** el AuraHash lleva `SHA-256(INE + nombre)` del comprador. La INE nunca viaja en claro.
+- **Verificación:** offline-first con lista firmada de IDs válidos descargada a las pistolas antes del evento.
+- **Reembolso:** política configurable por el emisor (`ventana_gratis_horas`, `costo_adicional_mxn`, etc.).
+- **Anti-reventa:** sin la INE del titular, el boleto no entra. Transferencia solo por canal oficial.
+- **Auditoría:** métricas completas post-evento (vendidos, reembolsados, asistencia, fraudes detectados).
+
+### 10.2 — Speech para presentaciones
+
+El documento `docs/VISION_COMERCIAL.md` contiene el **discurso de presentación** y las **preguntas frecuentes** de un auditorio con empresarios/promotores. NO es un pitch de venta corporativo, es un speech honesto sobre capacidades y limitaciones.
+
+### 10.3 — Aclaración importante
+
+AuraHash ID hoy es **MVP funcional + visión documentada**. NO es:
+- Un producto listo para vender.
+- Un reemplazo de Ticketmaster / ODESA.
+- Una solución completa sin integración.
+
+Lo que ofrece:
+- Protocolo abierto y auditable.
+- Arquitectura criptográfica probada.
+- Camino claro para adopción por fases (piloto → expansión → producción → escala).
+
+---
+
+## 11. Referencias
 
 - `docs/MINI-CONTEXTO_v3.txt` — Estado vivo del proyecto (pendientes, HEAD, métricas).
+- `docs/PERFILES.md` — Los 4 perfiles (salud/contacto/verificacion/legal).
+- `docs/FLUJO_EVENTOS.md` — Flujo end-to-end del sector eventos.
+- `docs/VISION_COMERCIAL.md` — Speech y Q&A para presentaciones.
 - `README.md` — Documentación pública.
 - `LICENSE` — MIT.
 - GitHub: https://github.com/Matheus-Devilson/AuraHash-ID (privado).
 
 ---
 
-*Última actualización: 2026-10-15 — Pendiente #6*
+*Última actualización: 2026-10-15 — Pendiente #13*
