@@ -1,0 +1,318 @@
+=== MINI-CONTEXTO PARA RETOMAR PROYECTO ===
+
+PROYECTO: AuraHash ID
+RUTA: C:\Users\erasn\Proyectos\AuraHash-ID
+HEAD: 258d35c
+GITHUB: https://github.com/Matheus-Devilson/AuraHash-ID (privado)
+
+--- HISTORICO (NO HEREDAR METRICAS) ---
+Chat anterior cerro en N1 (0-25%). Volumen acumulado alto en contenido
+conceptual, pero tecnicamente en N1. NO heredar metricas. Este chat
+nuevo empieza en N1 (0-25%).
+
+--- VISION DEL PROYECTO ---
+AuraHash ID es un protocolo universal de identificacion fisica-digital.
+Combina:
+- Nucleo: Data Matrix (ISO/IEC 16022) legible por Google Lens, WeChat,
+  camaras nativas.
+- Seguridad Visual: "Aura Estocastica" (ruido determinista via SHA-256),
+  efecto avalancha.
+- Criptografia: AES-256-GCM + zlib en capas sensibles + firma digital
+  Ed25519 end-to-end.
+Filosofia: 100% Offline-First. Privacidad por Diseno. Cero dependencia
+de servidores en lectura. Codigo abierto (MIT).
+
+--- ARQUITECTURA DE DATOS (3 CAPAS) ---
+- capa_publica: JSON MINIFICADO (claves cortas), visible con Google
+  Lens. Cero datos sensibles. Contiene el campo "perfil".
+- capa_medica: Datos de salud. zlib + AES-256-GCM al vuelo.
+- capa_administrativa: Datos legales/financieros. zlib + AES-256-GCM.
+
+--- 4 PERFILES DE APLICACION ---
+Formalizados en docs/PERFILES.md. El campo "perfil" va dentro de
+capa_publica y se minifica como "p".
+
+1. salud:        Emergencias medicas. PUB + MED + ADM. RBAC futuro.
+2. contacto:     Ninos/mascotas/adultos mayores. PUB solo. Cero cripto.
+3. verificacion: Boletos/activos con estado. PUB + ADM. Requiere lista
+                 firmada offline para estado dinamico.
+4. legal:        Contratos/certificaciones. PUB + ADM. Firma del emisor.
+
+--- FORMATO DEL PAYLOAD (v2.4.1) ---
+PUB:{json_minificado}|MED:AES256GCMZ:{base64}|ADM:AES256GCMZ:{base64}|SHA:{32hex}|SIG:{base64}
+
+Prefijos de cifrado:
+- "AES256GCMZ:" -> zlib + AES-256-GCM (formato actual v2.3.0+)
+- "AES256GCM:"  -> solo AES-256-GCM (formato legacy v2.1.0, reader
+                   aun lo acepta)
+
+Mapa de claves cortas PUB (generator.MAPA_CLAVES_PUB):
+  perfil->p, tipo->t, instruccion->i, nombre_pila->n,
+  alergias_criticas->a, id_visual->v, evento->e
+
+Mapa inverso en reader.MAPA_CLAVES_PUB_INV.
+
+--- ESTADO ACTUAL DEL MVP (v2.4.1) ---
+- 6 escenarios universales generados:
+  1. salud_emergencia_01    (salud)
+  2. personal_ciclista_01   (salud)
+  3. evento_boleto_01       (verificacion)
+  4. seguro_auto_01         (verificacion)
+  5. contacto_nino_01       (contacto)
+  6. legal_contrato_01      (legal)
+
+- generator.py v2.4.1 funcional:
+  - Data Matrix real (segno).
+  - Aura estocastica (numpy + Pillow).
+  - SHA-256 maestro de las 3 capas (64 chars internos para Aura).
+  - SHA truncado a 32 hex en payload.
+  - zlib + AES-256-GCM al vuelo de capas medica/admin.
+  - PUB minificado (claves cortas) antes de serializar.
+  - Firma Ed25519 del mensaje PUB|MED|ADM|SHA.
+  - Muestra perfil de cada escenario durante la generacion.
+  - .gitkeep inexistente (fue eliminado por ser JSON basura).
+
+- reader.py v1.4.0 funcional:
+  - Pide payload por consola con input().
+  - Parsea bloques PUB/MED/ADM/SHA/SIG.
+  - Detecta el perfil (salud/contacto/verificacion/legal) en PUB.
+  - Descifra MED y ADM con keys/aes.key (soporta zlib y legacy).
+  - Desminifica PUB para mostrarlo legible.
+  - Verifica integridad SHA-256 (completo o truncado).
+  - Verifica firma Ed25519 (informativa, nunca bloqueante).
+  - Imprime con formato legible.
+
+- keys_manager.py funcional:
+  - Genera par Ed25519 (privada 32 bytes + publica 32 bytes).
+  - Aborta si ya existen llaves (a menos que se use --force).
+  - Imprime rutas y advertencias.
+
+--- METRICAS DE OPTIMIZACION (pendiente #4 cerrado) ---
+- Payload v1 (original):        887 chars
+- Payload v2 (minif+SHA32):     808 chars (-8.9%)
+- Payload v3 (+zlib MED/ADM):   694 chars (-21.8%)
+- Payload v4 (+Ed25519 SIG):    ~787 chars
+Reduccion final: 21.8% en v3, se anaden ~93 chars por firma en v4.
+
+--- STACK TECNOLOGICO ---
+- Python 3.14.8
+- Librerias: segno, numpy, Pillow, cryptography 50.0.2, zlib (stdlib)
+- Entorno: VS Code + PowerShell + Git 2.55
+
+--- ESTRUCTURA DE ARCHIVOS ---
+aurahash-id/
+├── src/
+│   ├── generator.py             # Motor v2.4.1 (AES + zlib + Ed25519)
+│   ├── reader.py                # Lector/verificador v1.4.0
+│   └── keys_manager.py          # Generador de llaves Ed25519
+├── data/
+│   ├── .gitkeep
+│   └── example_data.json        # 6 escenarios (4 perfiles)
+├── output/                      # PNGs generados (ignorado por git)
+├── keys/
+│   ├── aes.key                  # Clave AES-256 (ignorado por git)
+│   ├── ed25519_private.key      # Llave privada Ed25519 (ignorado)
+│   ├── ed25519_public.key       # Llave publica Ed25519 (TRACKEADA)
+│   └── .gitkeep
+├── docs/
+│   ├── AI_CONTEXT.md            # Prompt Maestro del proyecto
+│   ├── PERFILES.md              # Los 4 perfiles formalizados
+│   ├── FLUJO_EVENTOS.md         # Flujo end-to-end de eventos
+│   ├── VISION_COMERCIAL.md      # Speech y Q&A para presentaciones
+│   ├── MINI-CONTEXTO_v2.txt     # Historico
+│   ├── MINI-CONTEXTO_v3.txt     # Historico
+│   └── MINI-CONTEXTO_v4.txt     # Este archivo (estado actual)
+├── backups/                     # Backups locales (ignorado por git)
+├── .gitignore
+├── LICENSE                      # MIT
+├── README.md
+└── requirements.txt
+
+--- DOCUMENTACION VIVA (FUENTES DE VERDAD) ---
+- docs/AI_CONTEXT.md            -> briefing estatico del proyecto
+- docs/PERFILES.md              -> definicion de los 4 perfiles
+- docs/FLUJO_EVENTOS.md         -> flujo end-to-end sector eventos
+- docs/VISION_COMERCIAL.md      -> speech + Q&A para presentaciones
+- docs/MINI-CONTEXTO_v4.txt     -> este archivo (estado vivo)
+- README.md                     -> documentacion publica
+
+--- LOGROS DEL CHAT ANTERIOR ---
+1. [CERRADO] #5  Firma digital Ed25519 end-to-end.          (8414c96)
+2. [CERRADO] #6  docs/AI_CONTEXT.md (Prompt Maestro).        (a25e858)
+3. [CERRADO] #7  LICENSE MIT.                                (859ad40)
+4. [CERRADO] #8  README v2.4.0 (arquitectura 3 capas).       (d8827b0)
+5. [CERRADO] #9  Borrar example_data_v1_OLD.json.            (7529846)
+6. [CERRADO] #10 Borrar src/.gitkeep (contenia JSON basura). (982bccd)
+7. [CERRADO] #12 Formalizar 4 perfiles + 2 escenarios.       (8b8c9f7)
+8. [CERRADO] #13 Flujo eventos + vision comercial.           (258d35c)
+9. [CERRADO]     docs MINI-CONTEXTO_v2/v3 al repo.           (f94d3e3)
+
+--- PENDIENTES ABIERTOS ---
+- #11 [ABIERTO]  Recortar contenido de example_data.json si se
+  quiere bajar mas el payload. Decision de producto, no tecnica.
+  Ahorro estimado: ~6%. No urgente.
+
+--- PENDIENTES FUTUROS (features grandes, requieren chat propio) ---
+A. RBAC por rol (envelope encryption). Para perfil salud:
+   - Datos cifrados una vez con DEK (Data Encryption Key).
+   - DEK cifrada por separado para cada rol (paramedico, medico,
+     hospital, aseguradora).
+   - Cada rol lleva su par X25519 (derivable de Ed25519).
+   - Payload crece +N*100 bytes.
+   - Idea: dividir DATA en bloques tematicos (critica, clinica,
+     financiera) y dar sobres selectivos por bloque.
+
+B. PWA / App Reader para no-programadores:
+   - Hoy reader.py es script Python de consola. Inutil para
+     un paramedico.
+   - PWA instalable desde URL (offline-first con Service Worker).
+   - Web Crypto API soporta AES-GCM y Ed25519 en navegadores
+     modernos (verificar compatibilidad).
+   - Parametro de diseno: cero instalacion, cero Python.
+
+C. Listas firmadas offline (perfil verificacion):
+   - Antes del evento, el emisor firma una lista de IDs validos.
+   - Las pistolas descargan la lista (firmada con Ed25519).
+   - Verificacion offline total sin backend.
+   - Refresh T-15min antes del evento (corte de cancelaciones).
+   - Ver docs/FLUJO_EVENTOS.md seccion 6.
+
+D. App de staff / pistola digital:
+   - Lectura de Data Matrix + verificacion Ed25519 + hash INE.
+   - Firmware para pistolas o app movil.
+   - Ver docs/FLUJO_EVENTOS.md secciones 8 y 10.
+
+E. Aura Dinamica (boletos digitales):
+   - Boleto rotativo cada 30s en el movil del comprador.
+   - Imposible fotografiar y revender.
+   - Requiere semilla entregada al comprar.
+
+F. Verificacion con estado remoto:
+   - Para boletos ya usados y maquinas en mantenimiento.
+   - Requiere endpoint del emisor.
+   - Rompe offline-first parcial. Cache local mitiga.
+
+G. Campos nuevos en payload del boleto:
+   - titular_hash (SHA-256 de INE + nombre).
+   - politica_reembolso (modalidad, costo, ventanas).
+   - estado (VENDIDO/USADO/CANCELADO/TRANSFERIDO).
+   - Ver docs/FLUJO_EVENTOS.md secciones 5 y 7.
+
+--- FLUJO DE TRABAJO CON LA IA (OBLIGATORIO) ---
+1. La IA entrega SIEMPRE el codigo COMPLETO del archivo a modificar
+   (no fragmentos, no "...", no diffs). El usuario borra el actual,
+   copia-pega, guarda en VS Code, verifica.
+2. Verificacion tipica: python -m py_compile + prueba funcional.
+3. Si algo falla: comando de 1 linea en PowerShell (Ctrl+C si hace
+   falta).
+4. Antes de cambios: Copy-Item [archivo] backups/[archivo]_ANTES_[fecha].
+5. Verificar con Select-String o python -c despues de cada cambio.
+6. Commit + push despues de CADA pendiente terminado (no acumular).
+7. Actualizar este MINI-CONTEXTO cuando cambie el estado.
+
+--- REGLAS OPERATIVAS ---
+- PowerShell 5.1: maximo 5-6 lineas por bloque pegado.
+- NUNCA pegar bloques largos (>30 lineas) en PowerShell: usar
+  VS Code o Notepad.
+- Editar .md y .py largos en VS Code, no en PowerShell.
+- NUNCA pegar codigo Python directamente en PowerShell. Solo
+  comandos del sistema.
+- Cero saludos, directo al grano.
+- Codigo completo, sin "...".
+- El usuario NO es programador profesional. Guiarlo paso a paso
+  con comandos exactos.
+- El usuario prefiere: editar archivos en VS Code, ejecutar
+  comandos en PowerShell.
+- Explicar terminos tecnicos brevemente cuando aparezcan.
+- Cero invencion de detalles (rutas, comandos, hashes). Si no se
+  sabe, se verifica.
+- PowerShell redirige ">" en UTF-16 con BOM. Para archivos de
+  texto usados por Python, escribir desde Python o convertir con
+  [System.IO.File]::WriteAllText + UTF8Encoding(false).
+
+--- IDIOMA Y TONO ---
+- Todo el proyecto en ESPANOL.
+- README, docs, comentarios de codigo: espanol.
+- Mensajes al usuario: espanol.
+- Tono: tecnico, directo, sin relleno.
+
+--- ESTADO DE HERRAMIENTAS (al cierre del chat anterior) ---
+- git status: working tree limpio.
+- HEAD: 258d35c.
+- VS Code: abierto en la carpeta del proyecto.
+- Python: 3.14.8 con segno, numpy, Pillow, cryptography 50.0.2,
+  zlib.
+- PowerShell: en C:\Users\erasn\Proyectos\AuraHash-ID.
+
+--- QUE PENDIENTE SIGUE ---
+Recomendacion: #11 (recortar example_data.json) o empezar un
+feature grande del listado "PENDIENTES FUTUROS".
+
+Mi recomendacion personal (a decidir por el usuario):
+- Si el usuario quiere CERRAR el MVP tecnico: atacar #11.
+- Si el usuario quiere IMPLEMENTAR valor real: atacar A (RBAC) o
+  G (campos nuevos del boleto) — son los que mas acercan al
+  producto.
+- Si el usuario quiere DEMO visual: atacar B (PWA reader) —
+  impresionante para presentaciones.
+
+Preguntar al usuario en el primer mensaje del nuevo chat que
+quiere hacer.
+
+=== FIN DEL MINI-CONTEXTO ===
+
+=== MONITOR DE CONTEXTO (OBLIGATORIO AL FINAL DE CADA RESPUESTA) ===
+
+Bloque exacto:
+[Estado del Contexto]
+- Volumen: Bajo / Medio / Alto
+- Coherencia: OK / Degradada
+- Preparacion: N1 / N2 / N3 / N4 + %
+- Recomendacion: <frase exacta>
+- Senales activas: N (0-7)
+
+--- REGLAS DE COHERENCIA INTERNA (CRITICO) ---
+Las 4 metricas DEBEN ser coherentes entre si.
+- N1 Fresco:   0-25%   Volumen tipico: Bajo
+- N2 Estable:  26-50%  Volumen tipico: Bajo/Medio
+- N3 Cargado:  51-75%  Volumen tipico: Medio/Alto
+- N4 Saturado: 76-100% Volumen tipico: Alto
+
+--- FRASES EXACTAS ---
+- N1: Continuar sin pensar en migrar
+- N2: Continuar
+- N3: Considerar migrar (preparar contexto en paralelo)
+- N4 temprano (76-84%): Terminar tarea en curso y migrar en el
+  proximo punto natural
+- N4 critico (85-89%): MIGRAR AHORA. Solo pedir contexto y cerrar.
+- N4 extremo (90-100%): MIGRAR AHORA. Chat saturado.
+
+--- SENALES DE DEGRADACION (contar 0-7) ---
+1. IA repite cosas ya dichas.
+2. IA olvida reglas establecidas.
+3. IA sugiere metodos ya probados y fallidos.
+4. IA mezcla contextos (proyectos o niveles).
+5. Usuario corrige a la IA cada 2-3 mensajes.
+6. Respuestas cada vez mas largas para lo mismo.
+7. IA inventa detalles (rutas, comandos, versiones, hashes).
+
+--- REGLA DURA ---
+- 0-1 senales: continuar normal.
+- 2-3 senales: migrar en el proximo punto natural.
+- 4+ senales: MIGRAR AHORA.
+
+--- CHECKLIST AL EMPEZAR (primer mensaje del nuevo chat) ---
+1. Confirmar HEAD: git log --oneline -1
+2. Confirmar working tree: git status
+3. Verificar estructura: Get-ChildItem -Recurse -Force |
+   Select-Object FullName
+4. Leer este mini-contexto y confirmar entendimiento.
+5. Preguntar al usuario en que pendiente quiere trabajar.
+
+--- RECORDATORIO DE FLUJO DE TRABAJO ---
+La IA SIEMPRE entrega el codigo COMPLETO del archivo a modificar
+(no fragmentos, no "...", no diffs). El usuario borra el actual,
+copia-pega, guarda, verifica. Despues: commit + push por cada
+pendiente terminado.
+
+=== FIN DEL MINI-CONTEXTO v4 ===
