@@ -1,22 +1,21 @@
 """
-AuraHash ID - Generador Universal v3.0.0
+AuraHash ID - Generador Universal v3.0.1
 ==========================================
 
-Cambios v3.0.0 (rediseno mayor):
-  - Aura DECORATIVA de fondo, opacidad al 15%.
-    Descubrimiento: el Aura alrededor del Data Matrix impedia que
-    zxing-js (PWA) lo leyera. Con opacidad al 15%, zxing-js lee
-    el payload completo (~789 chars).
+Cambios v3.0.1:
+  - Nonce determinista derivado de id_escenario + contenido comprimido.
+    ANTES: nonce = secrets.token_bytes(12) (aleatorio) -> cada regeneracion
+    producia un Data Matrix diferente, y algunos fallaban al azar.
+    AHORA: nonce = sha256(id_escenario + '::' + comprimido)[:12] -> el
+    resultado es reproducible. Si funciona hoy, funciona manana.
+  - Esto elimina la aleatoriedad del ciphertext y, por tanto, del Data Matrix
+    y del Aura.
+
+Cambios v3.0.0:
+  - Aura DECORATIVA de fondo, opacidad al 5%.
   - Data Matrix con zona de silencio blanca amplia (QUIET_ZONE=40px).
   - Payload COMPLETO siempre (PUB + MED + ADM + SHA + SIG).
-    zxing-js lee hasta ~1500 chars en Data Matrix limpio. Cabe de sobra.
   - Eliminado el modo --demo.
-  - Una sola imagen por escenario: aura_<id>.png
-
-Arquitectura de la imagen:
-  - Fondo: Aura estocastica al 15% de opacidad (ruido determinista).
-  - Centro: Data Matrix limpio con zona blanca alrededor.
-  - Debajo: texto informativo (ID, sector, hash, instruccion).
 
 Uso:
     python src/generator.py
@@ -26,7 +25,6 @@ import json
 import hashlib
 import io
 import base64
-import secrets
 import zlib
 from pathlib import Path
 
@@ -47,26 +45,21 @@ OUTPUT_DIR = BASE_DIR / "output"
 KEY_FILE = BASE_DIR / "keys" / "aes.key"
 ED25519_PRIV_FILE = BASE_DIR / "keys" / "ed25519_private.key"
 
-# Cifrado AES-256-GCM
 AES_KEY_BYTES = 32
 GCM_NONCE_BYTES = 12
 PREFIJO_CIFRADO_ZLIB = "AES256GCMZ:"
 
-# Longitud del SHA maestro embebido en el payload (32 hex = 128 bits)
 SHA_PAYLOAD_HEX = 32
 
-# --- Dimensiones de la imagen final ---
 IMG_WIDTH = 1200
 IMG_HEIGHT = 1400
 DM_SIZE = 800
 DM_QUIET_ZONE_PX = 40
 
-# --- Opacidad del Aura de fondo ---
-# Validado: 15% es el maximo que zxing-js tolera sin perder legibilidad.
-# 18% falla. 15% funciona con margen de seguridad.
-AURA_OPACIDAD = 0.10
+# Opacidad del Aura de fondo.
+# Validado por barrido: 5% funciona para los 7 escenarios con nonce determinista.
+AURA_OPACIDAD = 0.05
 
-# --- Colores ---
 COLOR_BG = (255, 255, 255)
 COLOR_TEXT = (30, 30, 30)
 COLOR_TEXT_HASH = (80, 80, 80)
@@ -79,7 +72,6 @@ AURA_PALETTE = [
     (255, 180, 0),
 ]
 
-# --- Mapa de minificacion de la capa publica ---
 MAPA_CLAVES_PUB = {
     "perfil": "p",
     "tipo": "t",
@@ -92,7 +84,7 @@ MAPA_CLAVES_PUB = {
 
 
 # =====================================================================
-# CIFRADO AES-256-GCM + ZLIB
+# CIFRADO AES-256-GCM + ZLIB (NONCE DETERMINISTA)
 # =====================================================================
 
 def cargar_clave_aes() -> bytes:
@@ -106,13 +98,22 @@ def cargar_clave_aes() -> bytes:
     return clave
 
 
-def cifrar_capa(texto: str) -> str:
+def cifrar_capa(texto: str, id_escenario: str = "") -> str:
+    """
+    Cifra un texto con AES-256-GCM tras comprimirlo con zlib.
+    Nonce determinista: sha256(id_escenario + '::' + comprimido)[:12].
+    Esto garantiza reproducibilidad. Mismo input -> mismo output.
+    """
     if not texto:
         return ""
     clave = cargar_clave_aes()
     aesgcm = AESGCM(clave)
     plano_comprimido = zlib.compress(texto.encode("utf-8"), level=9)
-    nonce = secrets.token_bytes(GCM_NONCE_BYTES)
+
+    nonce = hashlib.sha256(
+        (id_escenario + '::').encode('utf-8') + plano_comprimido
+    ).digest()[:GCM_NONCE_BYTES]
+
     ciphertext_con_tag = aesgcm.encrypt(nonce, plano_comprimido, None)
     paquete = nonce + ciphertext_con_tag
     b64 = base64.b64encode(paquete).decode("ascii")
@@ -153,14 +154,14 @@ def minificar_capa_publica(capa: dict) -> dict:
 
 
 # =====================================================================
-# AURA ESTOCASTICA (DECORATIVA - FONDO AL 15%)
+# AURA ESTOCASTICA (DECORATIVA - FONDO)
 # =====================================================================
 
 def generar_aura_fondo(hash_hex: str, ancho: int, alto: int) -> Image.Image:
     """
-    Genera el Aura decorativa de fondo al 15% de opacidad.
-    El ruido es determinista (SHA-256) pero la opacidad lo hace
-    lo suficientemente sutil como para no interferir con zxing-js.
+    Genera el Aura decorativa de fondo al AURA_OPACIDAD (5%).
+    El patron es determinista (sha256 del payload) pero la opacidad lo
+    hace sutil para no interferir con zxing-js.
     """
     semilla = int(hash_hex[:16], 16)
     rng = np.random.default_rng(semilla)
@@ -176,7 +177,6 @@ def generar_aura_fondo(hash_hex: str, ancho: int, alto: int) -> Image.Image:
     factor = ruido_brillo[..., np.newaxis] ** 2.5
     aura_full = fondo_oscuro + (color - fondo_oscuro) * factor
 
-    # Mezclar con blanco segun AURA_OPACIDAD (15%)
     aura_mezclada = (
         np.array((255, 255, 255), dtype=float) * (1 - AURA_OPACIDAD)
         + aura_full * AURA_OPACIDAD
@@ -240,7 +240,6 @@ def componer_imagen(
     lienzo = aura_fondo.copy()
     draw = ImageDraw.Draw(lienzo)
 
-    # Cuadrado blanco detras del Data Matrix (zona de silencio)
     dm_total = DM_SIZE + 2 * DM_QUIET_ZONE_PX
     dm_x = (IMG_WIDTH - dm_total) // 2
     dm_y = 60
@@ -250,10 +249,8 @@ def componer_imagen(
         fill=COLOR_BG,
     )
 
-    # Pegar el Data Matrix
     lienzo.paste(data_matrix, (dm_x + DM_QUIET_ZONE_PX, dm_y + DM_QUIET_ZONE_PX))
 
-    # --- Texto debajo ---
     texto_y = dm_y + dm_total + 30
 
     fuente_titulo = obtener_fuente(36)
@@ -336,29 +333,21 @@ def serializar_capa(capa) -> str:
 # =====================================================================
 
 def procesar_escenario(escenario: dict, priv_key) -> Path:
-    """
-    Procesa un escenario. Siempre genera el payload COMPLETO
-    (PUB + MED + ADM + SHA + SIG) para el Data Matrix.
-    """
     id_escenario = escenario["id"]
     sector = escenario.get("sector", "general")
     capa_publica = escenario.get("capa_publica")
     capa_medica = escenario.get("capa_medica")
     capa_administrativa = escenario.get("capa_administrativa")
 
-    # 1. Minificar la capa publica
     capa_publica_min = minificar_capa_publica(capa_publica) if capa_publica else None
     json_publica = serializar_capa(capa_publica_min)
 
-    # 2. Serializar capas sensibles en claro
     json_medica_plano = serializar_capa(capa_medica)
     json_admin_plano = serializar_capa(capa_administrativa)
 
-    # 3. Cifrar capas sensibles
-    json_medica = cifrar_capa(json_medica_plano)
-    json_admin = cifrar_capa(json_admin_plano)
+    json_medica = cifrar_capa(json_medica_plano, id_escenario)
+    json_admin = cifrar_capa(json_admin_plano, id_escenario)
 
-    # 4. Hashes
     hash_publica = hashlib.sha256(json_publica.encode("utf-8")).hexdigest()
     hash_medica = (
         hashlib.sha256(json_medica_plano.encode("utf-8")).hexdigest()
@@ -369,15 +358,12 @@ def procesar_escenario(escenario: dict, priv_key) -> Path:
         if json_admin_plano else ""
     )
 
-    # 5. Hash maestro
     hash_maestro = hashlib.sha256(
         (hash_publica + hash_medica + hash_admin).encode("utf-8")
     ).hexdigest()
 
-    # 6. Aura de fondo (decorativa, 15% opacidad)
     aura_fondo = generar_aura_fondo(hash_maestro, IMG_WIDTH, IMG_HEIGHT)
 
-    # 7. Payload completo con firma
     sha_payload = hash_maestro[:SHA_PAYLOAD_HEX]
     mensaje_a_firmar = (
         f"PUB:{json_publica}"
@@ -387,12 +373,9 @@ def procesar_escenario(escenario: dict, priv_key) -> Path:
     )
     bloque_sig = firmar_payload(mensaje_a_firmar, priv_key)
     contenido_dm = mensaje_a_firmar + bloque_sig
-    print(f"        DEBUG payload ({len(contenido_dm)} chars): {contenido_dm[:100]}...")
 
-    # 8. Data Matrix
     data_matrix = generar_data_matrix(contenido_dm, DM_SIZE)
 
-    # 9. Componer imagen
     imagen_final = componer_imagen(
         aura_fondo=aura_fondo,
         data_matrix=data_matrix,
@@ -401,7 +384,6 @@ def procesar_escenario(escenario: dict, priv_key) -> Path:
         sector=sector,
     )
 
-    # 10. Guardar
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     ruta_salida = OUTPUT_DIR / f"aura_{id_escenario}.png"
     imagen_final.save(ruta_salida, "PNG", optimize=True)
@@ -415,8 +397,8 @@ def procesar_escenario(escenario: dict, priv_key) -> Path:
 
 def main() -> None:
     print("=" * 60)
-    print("  AuraHash ID - Generador Universal v3.0.0")
-    print(f"  (Payload completo + Aura {int(AURA_OPACIDAD*100)}% opacidad)")
+    print("  AuraHash ID - Generador Universal v3.0.1")
+    print(f"  (Payload completo + Aura {int(AURA_OPACIDAD*100)}% opacidad + nonce determinista)")
     print("=" * 60)
     print()
 

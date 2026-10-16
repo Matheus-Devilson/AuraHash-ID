@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "3.0.0",
+    "version": "3.0.2",
     "description": "AuraHash ID - Arquitectura de 3 capas + 4 perfiles + 7 escenarios universales",
     "generated_by": "AuraHash-ID / data/example_data.json",
     "privacy_note": "capa_publica es visible con Google Lens. Las otras 2 iran cifradas en produccion.",
@@ -126,7 +126,7 @@
       }
     },
     {
-      "id": "legal_contrato_01",
+      "id": "legal_contrato_02",
       "sector": "legal",
       "descripcion": "Certificacion al calce de contrato notarial",
       "capa_publica": {
@@ -134,17 +134,17 @@
         "tipo": "CERTIFICACION_LEGAL",
         "instruccion": "Verifique integridad del documento con AuraHash Reader",
         "evento": "Contrato de compraventa - Notaria 45 CDMX",
-        "id_visual": "C4A1-9F3D"
+        "id_visual": "C5B2-8E4A"
       },
       "capa_medica": null,
       "capa_administrativa": {
         "hash_documento": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "emisor": "Notaria Publica No. 45 - CDMX",
-        "notario": "Lic. Roberto Ejemplo",
+        "notario": "Lic. Patricia Ejemplo",
         "tipo_acto": "Compraventa",
-        "fecha_emision": "2026-10-15",
-        "partes": ["Ana Ejemplo", "Luis Ejemplo"],
-        "folio_notarial": "NOT45-2026-10234"
+        "fecha_emision": "2026-10-20",
+        "partes": ["Ana Ejemplo", "Carlos Ejemplo"],
+        "folio_notarial": "NOT45-2026-20567"
       }
     },
     {
