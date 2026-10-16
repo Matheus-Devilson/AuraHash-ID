@@ -1,0 +1,101 @@
+=== MINI-CONTEXTO FINAL (v6) ===
+
+PROYECTO: AuraHash ID
+RUTA: C:\Users\erasn\Proyectos\AuraHash-ID
+HEAD: d43bbfd (origin/main, origin/HEAD)
+GITHUB: https://github.com/Matheus-Devilson/AuraHash-ID (privado)
+
+--- ESTADO: PROYECTO CERRADO v3.0.1 ---
+El proyecto esta funcional, documentado y pusheado.
+Todas las limitaciones conocidas estan documentadas en docs/LIMITACIONES.md.
+
+--- COMPONENTES ---
+- src/generator.py v3.0.1: 7 escenarios, nonce determinista, Aura 5%.
+- src/reader.py v1.4.0: descifra MED/ADM, verifica Ed25519 y SHA-256.
+- src/keys_manager.py: genera par Ed25519.
+- pwa/index.html v2.0.1: PWA con zxing-js, Web Crypto API, DecompressionStream.
+- data/example_data.json: 7 escenarios.
+- docs/: documentacion completa (VISION, PERFILES, FLUJO_EVENTOS,
+  VISION_COMERCIAL, LIMITACIONES, MINI-CONTEXTOS).
+
+--- ESCENARIOS ---
+1. salud_emergencia_02    (salud)         PWA OK | Lens OK | reader OK
+2. personal_ciclista_01   (salud)         PWA OK | Lens OK | reader OK
+3. evento_boleto_01       (verificacion)  PWA OK | Lens OK | reader OK
+4. seguro_auto_01         (verificacion)  PWA OK | Lens OK | reader OK
+5. contacto_nino_01       (contacto)      PWA OK | Lens OK | reader OK
+6. legal_contrato_02      (legal)         PWA a veces falla | Lens OK | reader OK
+7. militar_inteligencia_01 (militar)      PWA a veces falla | Lens OK | reader OK
+
+Tasa de exito en PWA: 5-6 de 7 (~70-85%).
+Tasa de exito con Google Lens: 7/7 (100%).
+Tasa de exito con reader.py: 7/7 (100%).
+
+--- LIMITACION DE zxing-js (documentada) ---
+- Tasa de exito: 5-6 de 7 (~70-85%).
+- Causa raiz: zxing-js tiene dificultades con ciertos patrones de
+  Data Matrix de alta densidad (>900 chars con Aura).
+- No es el Aura. Es la libreria.
+- Solucion para produccion: SDK nativo (Google ML Kit, Apple Vision,
+  Dynamsoft).
+- Alternativa inmediata: Google Lens (lee el 100%, solo capa publica).
+- Documento completo: docs/LIMITACIONES.md
+
+--- COMMITS PRINCIPALES (hasta cierre) ---
+- b008d36: docs: crear VISION.md universal
+- a23878a: docs: enriquecer README con VISION
+- 640d060: feat: escenario militar
+- fc0bba9: docs: seccion 9 VISION_COMERCIAL
+- 55912ec: fix: perfil salud a personal_ciclista_01
+- 01aed3f: feat: generator v3.0.0
+- bf00210: fix: salud_emergencia_02
+- 2c2af5c: feat: PWA reader v2.0.1
+- a29a73b: docs: MINI-CONTEXTO v5
+- 43ba24a: feat: generator v3.0.1 (nonce determinista + opacidad 5%)
+- 8368b48: feat: scripts de diagnostico
+- d43bbfd: docs: cierre v3.0.1 - LIMITACIONES.md + README
+
+--- PENDIENTES FUTUROS (no urgentes) ---
+A. SDK nativo Android/iOS (Google ML Kit, Apple Vision).
+B. RBAC por rol (envelope encryption).
+C. Listas firmadas offline (perfil verificacion).
+D. App de staff / pistola digital.
+E. Aura Dinamica (boletos digitales).
+F. Verificacion con estado remoto.
+G. Campos nuevos en payload del boleto.
+
+--- BACKUPS ---
+Todos los backups estan en backups/ (ignorado por git).
+Ultimos backups:
+- generator_v301_2026-10-16.py
+- pwa_index_v201_2026-10-16.html
+- example_data_2026-10-16.json
+
+--- FLUJO DE TRABAJO ---
+1. Codigo completo (no fragmentos).
+2. Backup antes de cambios.
+3. Commit + push por pendiente terminado.
+4. Actualizar este mini-contexto si cambia el estado.
+
+--- REGLAS OPERATIVAS ---
+- PowerShell 5.1: maximo 5-6 lineas por bloque.
+- NUNCA pegar codigo Python o markdown en PowerShell.
+  Solo comandos del sistema.
+- Editar archivos .md, .py, .txt en VS Code.
+- Cero saludos, directo al grano.
+- Codigo completo, sin "...".
+- Usuario NO es programador profesional.
+- Cero invencion de detalles.
+
+--- IDIOMA Y TONO ---
+- Todo en ESPANOL.
+- Tono tecnico, directo, sin relleno.
+
+--- ESTADO FINAL ---
+El proyecto esta cerrado. Funciona para 5-6 de 7 escenarios con
+zxing-js, y para el 100% con lectores nativos.
+Documentacion completa. Backups en backups/. Todo pusheado a GitHub.
+
+Para retomar: leer este mini-contexto + docs/LIMITACIONES.md.
+
+=== FIN DEL MINI-CONTEXTO v6 ===
