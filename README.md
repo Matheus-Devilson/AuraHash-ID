@@ -11,6 +11,10 @@
 [![Standard](https://img.shields.io/badge/ISO%2FIEC-16022%20Data%20Matrix-005571?style=flat-square)](https://www.iso.org/standard/44230.html)
 [![Crypto](https://img.shields.io/badge/Crypto-AES--256--GCM%20%2B%20Ed25519-8A2BE2?style=flat-square)](https://ed25519.cr.yp.to/)
 [![Status](https://img.shields.io/badge/Status-MVP%20v3.0.1-orange?style=flat-square)]()
+[![Issues](https://img.shields.io/github/issues/Matheus-Devilson/AuraHash-ID?style=flat-square)](https://github.com/Matheus-Devilson/AuraHash-ID/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/Matheus-Devilson/AuraHash-ID?style=flat-square)](https://github.com/Matheus-Devilson/AuraHash-ID/pulls)
+[![Stars](https://img.shields.io/github/stars/Matheus-Devilson/AuraHash-ID?style=flat-square)](https://github.com/Matheus-Devilson/AuraHash-ID/stargazers)
+[![Forks](https://img.shields.io/github/forks/Matheus-Devilson/AuraHash-ID?style=flat-square)](https://github.com/Matheus-Devilson/AuraHash-ID/network/members)
 
 </div>
 
