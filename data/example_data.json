@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "2.4.1",
+    "version": "3.0.0",
     "description": "AuraHash ID - Arquitectura de 3 capas + 4 perfiles + 7 escenarios universales",
     "generated_by": "AuraHash-ID / data/example_data.json",
     "privacy_note": "capa_publica es visible con Google Lens. Las otras 2 iran cifradas en produccion.",
@@ -8,31 +8,31 @@
   },
   "escenarios": [
     {
-      "id": "salud_emergencia_01",
+      "id": "salud_emergencia_02",
       "sector": "salud",
       "descripcion": "Pulsera de emergencia para paciente con alergias criticas",
       "capa_publica": {
         "perfil": "salud",
         "tipo": "EMERGENCIA_MEDICA",
         "instruccion": "Llame al 911 o contacte a familiar",
-        "nombre_pila": "Ana",
-        "alergias_criticas": "Penicilina",
-        "id_visual": "7A3C-91F2"
+        "nombre_pila": "Sofia",
+        "alergias_criticas": "Mariscos",
+        "id_visual": "8B4D-2A5E"
       },
       "capa_medica": {
-        "nombre_completo": "Ana Ejemplo",
+        "nombre_completo": "Sofia Ejemplo",
         "edad": 34,
         "peso_aprox_kg": 78,
         "tipo_sangre": "O+",
-        "alergias": ["Penicilina", "Sulfamidas"],
+        "alergias": ["Mariscos", "Sulfamidas"],
         "medicamentos": ["Insulina diaria", "Warfarina"],
         "condiciones": ["Diabetes Tipo 2"],
-        "notas": "Autorizo tratamiento de emergencia. Alergica a penicilina."
+        "notas": "Autorizo tratamiento de emergencia. Alergica a mariscos."
       },
       "capa_administrativa": {
-        "curp_parcial": "****1234",
+        "curp_parcial": "****5678",
         "aseguradora": "GNP Seguros",
-        "poliza": "GNP-2024-123456789-A",
+        "poliza": "GNP-2025-987654321-B",
         "tel_aseguradora": "800-400-9000",
         "donante_organos": "SI"
       }
