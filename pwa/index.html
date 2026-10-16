@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a14">
+<title>AuraHash ID — Lector</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+<script src="https://unpkg.com/@zxing/library@0.21.3"></script>
+<style>
+:root {
+  --bg: #0a0a14;
+  --bg-card: #14141f;
+  --bg-card-alt: #1a1a28;
+  --border: #2a2a3f;
+  --text: #e8e8f0;
+  --text-dim: #8888a8;
+  --accent: #00c8ff;
+  --accent2: #ff00b4;
+  --ok: #00ff96;
+  --warn: #ffb400;
+  --err: #ff4466;
+  --salud: #00c8ff;
+  --contacto: #00ff96;
+  --verificacion: #ffb400;
+  --legal: #b478ff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+body { display: flex; flex-direction: column; }
+header {
+  background: linear-gradient(135deg, #0a0a14 0%, #1a1a28 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+header h1 .shield { font-size: 22px; }
+header .status {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+header .status.online { color: var(--ok); border-color: var(--ok); }
+header .status.offline { color: var(--warn); border-color: var(--warn); }
+main {
+  flex: 1;
+  padding: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card h2 {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+#video-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  display: none;
+}
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#video-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: inset 0 0 60px rgba(0, 200, 255, 0.2);
+}
+#video-overlay::before, #video-overlay::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-color: var(--accent);
+}
+#video-overlay::before { top: 10px; left: 10px; border-top: 3px solid; border-left: 3px solid; }
+#video-overlay::after { bottom: 10px; right: 10px; border-bottom: 3px solid; border-right: 3px solid; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 200, 255, 0.3); }
+.btn:active { transform: translateY(0); }
+.btn.secondary {
+  background: var(--bg-card-alt);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.danger {
+  background: var(--err);
+  color: #fff;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn-row { display: flex; gap: 10px; margin-top: 12px; }
+.btn-row .btn { flex: 1; }
+.perfil-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+.perfil-badge.salud { background: rgba(0, 200, 255, 0.15); color: var(--salud); border: 1px solid var(--salud); }
+.perfil-badge.contacto { background: rgba(0, 255, 150, 0.15); color: var(--contacto); border: 1px solid var(--contacto); }
+.perfil-badge.verificacion { background: rgba(255, 180, 0, 0.15); color: var(--verificacion); border: 1px solid var(--verificacion); }
+.perfil-badge.legal { background: rgba(180, 120, 255, 0.15); color: var(--legal); border: 1px solid var(--legal); }
+.perfil-badge.desconocido { background: rgba(136, 136, 168, 0.15); color: var(--text-dim); border: 1px solid var(--text-dim); }
+.section {
+  background: var(--bg-card-alt);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.section h3 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section h3 .icon { font-size: 14px; }
+.kv {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 6px 16px;
+  font-size: 14px;
+}
+.kv .k {
+  color: var(--text-dim);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-top: 2px;
+}
+.kv .v {
+  color: var(--text);
+  word-break: break-word;
+}
+.kv .v.mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 14px;
+}
+.check-icon { font-size: 18px; width: 24px; text-align: center; }
+.check-icon.ok { color: var(--ok); }
+.check-icon.err { color: var(--err); }
+.check-icon.warn { color: var(--warn); }
+.check-text { flex: 1; }
+.check-label { font-weight: 600; }
+.check-detail {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  word-break: break-all;
+  margin-top: 2px;
+}
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-dim);
+}
+.empty .icon { font-size: 48px; margin-bottom: 12px; }
+.empty .title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.empty .desc { font-size: 13px; }
+.alert {
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.alert.error { background: rgba(255, 68, 102, 0.15); border: 1px solid var(--err); color: #ffb8c4; }
+.alert.warn { background: rgba(255, 180, 0, 0.15); border: 1px solid var(--warn); color: #ffe0a8; }
+.alert.info { background: rgba(0, 200, 255, 0.15); border: 1px solid var(--accent); color: #b8e8ff; }
+.alert .icon { flex-shrink: 0; }
+footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+footer a { color: var(--accent); text-decoration: none; }
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.hidden { display: none !important; }
+.pub-raw {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.status-msg {
+  text-align: center;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.status-msg.ok { color: var(--ok); }
+.status-msg.warn { color: var(--warn); }
+.status-msg.err { color: var(--err); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="shield">🛡️</span> AuraHash ID</h1>
+  <span class="status" id="status">Cargando…</span>
+</header>
+
+<main>
+
+  <div class="alert info" id="aviso-llaves">
+    <span class="icon">🔑</span>
+    <div>
+      <strong>Modo demo.</strong> Las llaves están embebidas en esta PWA. En producción deben ir en un archivo de configuración separado, nunca en el HTML.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📷 Escanear Data Matrix</h2>
+    <div id="video-container">
+      <video id="video" playsinline autoplay muted></video>
+      <div id="video-overlay"></div>
+    </div>
+    <div class="status-msg" id="status-msg"></div>
+    <button class="btn" id="btn-start">▶ Iniciar cámara y escanear</button>
+    <div class="btn-row hidden" id="btn-row-stop">
+      <button class="btn secondary" id="btn-stop">■ Detener cámara</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary" id="btn-upload">📁 Subir imagen</button>
+      <input type="file" id="file-input" accept="image/*" class="hidden">
+    </div>
+  </div>
+
+  <div id="resultado-container"></div>
+
+</main>
+
+<footer>
+  AuraHash ID — Protocolo universal de confianza offline<br>
+  <a href="https://github.com/Matheus-Devilson/AuraHash-ID" target="_blank" rel="noopener">github.com/Matheus-Devilson/AuraHash-ID</a>
+</footer>
+
+<script>
+/* ============================================================
+   AuraHash ID — PWA Reader v2.0.1
+   Lee Data Matrix, descifra capas AES-256-GCM y verifica Ed25519.
+   v2.0.1: estrategia dual para "Subir imagen" (imagen completa,
+   luego crop 70% central si falla).
+   ============================================================ */
+
+'use strict';
+
+// --- Llaves embebidas (MODO DEMO) ---
+const AES_KEY_B64 = 'Fy2/ZT+YDUO+cF6KGBSleP+lMiaf3tl0IkCGRSC0ruM=';
+const ED25519_PUB_B64 = 'SPLjOcVI5tEBAoTQTg2XH6p4p7jf+xkOmtM+5RhHP8Q=';
+
+// --- Prefijos de cifrado ---
+const PREFIJO_CIFRADO_ZLIB = 'AES256GCMZ:';
+const PREFIJO_CIFRADO = 'AES256GCM:';
+
+// --- Mapa inverso de claves PUB ---
+const MAPA_PUB_INV = {
+  p: 'perfil',
+  t: 'tipo',
+  i: 'instruccion',
+  n: 'nombre_pila',
+  a: 'alergias_criticas',
+  v: 'id_visual',
+  e: 'evento',
+};
+
+// --- Estado global ---
+let codeReader = null;
+let videoStream = null;
+let scanning = false;
+let scanTimeout = null;
+
+// --- Utilidades ---
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256Hex(text) {
+  const buf = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return bytesToHex(new Uint8Array(hash));
+}
+
+// --- Estado de conexión ---
+function actualizarEstadoConexion() {
+  const el = document.getElementById('status');
+  if (navigator.onLine) {
+    el.textContent = '● En línea';
+    el.className = 'status online';
+  } else {
+    el.textContent = '● Offline';
+    el.className = 'status offline';
+  }
+}
+window.addEventListener('online', actualizarEstadoConexion);
+window.addEventListener('offline', actualizarEstadoConexion);
+
+// --- Mensajes de estado ---
+function setStatusMsg(msg, tipo = '') {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = 'status-msg' + (tipo ? ' ' + tipo : '');
+}
+function clearStatusMsg() {
+  setStatusMsg('');
+}
+
+// --- Parseo del payload ---
+function parsearPayload(payload) {
+  const bloques = { PUB: '', MED: '', ADM: '', SHA: '', SIG: '' };
+  const partes = payload.trim().split('|');
+  for (const parte of partes) {
+    const idx = parte.indexOf(':');
+    if (idx < 0) continue;
+    const prefijo = parte.slice(0, idx).trim().toUpperCase();
+    if (prefijo in bloques) bloques[prefijo] = parte.slice(idx + 1);
+  }
+  return bloques;
+}
+
+// --- Desminificación PUB ---
+function desminificarPUB(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[MAPA_PUB_INV[k] || k] = v;
+  }
+  return out;
+}
+
+// --- Descompresión zlib (DecompressionStream nativo) ---
+async function descomprimirZlib(bytes) {
+  if (typeof DecompressionStream === 'undefined') {
+    throw new Error('Este navegador no soporta DecompressionStream (zlib). Usa Chrome 80+, Edge 80+, Safari 16.4+ o Firefox 113+.');
+  }
+  const ds = new DecompressionStream('deflate');
+  const writer = ds.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  const reader = ds.readable.getReader();
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) { out.set(c, offset); offset += c.length; }
+  return out;
+}
+
+// --- Descifrado AES-256-GCM ---
+async function descifrarCapa(textoCifrado) {
+  if (!textoCifrado) return '';
+
+  let usarZlib = false;
+  let b64 = '';
+  if (textoCifrado.startsWith(PREFIJO_CIFRADO_ZLIB)) {
+    usarZlib = true;
+    b64 = textoCifrado.slice(PREFIJO_CIFRADO_ZLIB.length);
+  } else if (textoCifrado.startsWith(PREFIJO_CIFRADO)) {
+    usarZlib = false;
+    b64 = textoCifrado.slice(PREFIJO_CIFRADO.length);
+  } else {
+    throw new Error('Prefijo de cifrado desconocido');
+  }
+
+  const paquete = b64ToBytes(b64);
+  if (paquete.length < 12 + 16) throw new Error('Paquete cifrado demasiado corto');
+
+  const nonce = paquete.slice(0, 12);
+  const ctConTag = paquete.slice(12);
+
+  const keyBytes = b64ToBytes(AES_KEY_B64);
+  const key = await crypto.subtle.importKey(
+    'raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']
+  );
+
+  let planoBytes;
+  try {
+    planoBytes = new Uint8Array(await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: nonce, tagLength: 128 },
+      key,
+      ctConTag
+    ));
+  } catch (e) {
+    throw new Error('Descifrado AES-GCM falló (¿clave incorrecta o datos alterados?)');
+  }
+
+  if (usarZlib) {
+    planoBytes = await descomprimirZlib(planoBytes);
+  }
+
+  return new TextDecoder('utf-8').decode(planoBytes);
+}
+
+// --- Verificación Ed25519 ---
+async function verificarEd25519(mensaje, sigB64) {
+  if (typeof crypto.subtle.verify !== 'function') {
+    return { ok: false, motivo: 'Web Crypto API no soporta verify' };
+  }
+  let sigBytes;
+  try { sigBytes = b64ToBytes(sigB64); } catch { return { ok: false, motivo: 'Firma base64 inválida' }; }
+  if (sigBytes.length !== 64) return { ok: false, motivo: `Firma mide ${sigBytes.length} bytes, esperado 64` };
+
+  const pubBytes = b64ToBytes(ED25519_PUB_B64);
+  let pubKey;
+  try {
+    pubKey = await crypto.subtle.importKey(
+      'raw', pubBytes, { name: 'Ed25519' }, false, ['verify']
+    );
+  } catch (e) {
+    return { ok: false, motivo: 'Ed25519 no soportado en este navegador', noSoportado: true };
+  }
+
+  try {
+    const ok = await crypto.subtle.verify(
+      { name: 'Ed25519' },
+      pubKey,
+      sigBytes,
+      new TextEncoder().encode(mensaje)
+    );
+    return { ok, motivo: ok ? 'Firma válida' : 'La firma no coincide con el contenido' };
+  } catch (e) {
+    return { ok: false, motivo: `Error al verificar: ${e.message}` };
+  }
+}
+
+// --- Renderizado del resultado ---
+function renderKV(container, obj) {
+  const kv = document.createElement('div');
+  kv.className = 'kv';
+  for (const [k, v] of Object.entries(obj)) {
+    const kEl = document.createElement('div');
+    kEl.className = 'k';
+    kEl.textContent = k;
+    const vEl = document.createElement('div');
+    vEl.className = 'v';
+    if (Array.isArray(v)) {
+      vEl.textContent = v.join(', ');
+    } else if (typeof v === 'object' && v !== null) {
+      vEl.textContent = JSON.stringify(v);
+    } else {
+      vEl.textContent = String(v);
+    }
+    kv.appendChild(kEl);
+    kv.appendChild(vEl);
+  }
+  container.appendChild(kv);
+}
+
+function crearSeccion(icono, titulo) {
+  const sec = document.createElement('div');
+  sec.className = 'section';
+  const h = document.createElement('h3');
+  h.innerHTML = `<span class="icon">${icono}</span>${titulo}`;
+  sec.appendChild(h);
+  return sec;
+}
+
+function crearCheckRow(estado, label, detalle) {
+  const row = document.createElement('div');
+  row.className = 'check-row';
+  const icon = document.createElement('span');
+  icon.className = `check-icon ${estado}`;
+  icon.textContent = estado === 'ok' ? '✓' : estado === 'err' ? '✗' : '⚠';
+  const text = document.createElement('div');
+  text.className = 'check-text';
+  const l = document.createElement('div');
+  l.className = 'check-label';
+  l.textContent = label;
+  text.appendChild(l);
+  if (detalle) {
+    const d = document.createElement('div');
+    d.className = 'check-detail';
+    d.textContent = detalle;
+    text.appendChild(d);
+  }
+  row.appendChild(icon);
+  row.appendChild(text);
+  return row;
+}
+
+function mensajeError(titulo, detalle) {
+  const d = document.createElement('div');
+  d.className = 'alert error';
+  d.innerHTML = `<span class="icon">⚠️</span><div><strong>${titulo}</strong><br><span style="font-size:12px">${detalle}</span></div>`;
+  return d;
+}
+
+function mensajeInfo(texto) {
+  const d = document.createElement('div');
+  d.style.color = 'var(--text-dim)';
+  d.style.fontStyle = 'italic';
+  d.style.fontSize = '13px';
+  d.textContent = texto;
+  return d;
+}
+
+async function renderizarResultado(payload) {
+  const cont = document.getElementById('resultado-container');
+  cont.innerHTML = '';
+  clearStatusMsg();
+
+  let bloques;
+  try {
+    bloques = parsearPayload(payload);
+  } catch (e) {
+    cont.appendChild(mensajeError('Payload malformado', e.message));
+    return;
+  }
+
+  if (!bloques.PUB && !bloques.MED && !bloques.ADM) {
+    cont.appendChild(mensajeError('Payload inválido', 'No se detectaron bloques PUB/MED/ADM.'));
+    return;
+  }
+
+  // --- Detectar perfil ---
+  let perfil = 'desconocido';
+  let pubObj = null;
+  if (bloques.PUB) {
+    try {
+      pubObj = desminificarPUB(JSON.parse(bloques.PUB));
+      if (pubObj.perfil) perfil = String(pubObj.perfil).toLowerCase();
+    } catch {}
+  }
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const badge = document.createElement('div');
+  badge.className = `perfil-badge ${perfil}`;
+  badge.textContent = `● Perfil: ${perfil}`;
+  card.appendChild(badge);
+
+  // --- Capa pública ---
+  const secPub = crearSeccion('🌐', 'Capa pública (texto claro)');
+  if (pubObj) {
+    renderKV(secPub, pubObj);
+  } else {
+    const p = document.createElement('div');
+    p.className = 'pub-raw';
+    p.textContent = bloques.PUB || '(vacía)';
+    secPub.appendChild(p);
+  }
+  card.appendChild(secPub);
+
+  // --- Capa médica ---
+  const secMed = crearSeccion('🏥', 'Capa médica (descifrada)');
+  if (bloques.MED) {
+    try {
+      const plano = await descifrarCapa(bloques.MED);
+      renderKV(secMed, JSON.parse(plano));
+    } catch (e) {
+      secMed.appendChild(mensajeError('No se pudo descifrar MED', e.message));
+    }
+  } else {
+    secMed.appendChild(mensajeInfo('(vacía)'));
+  }
+  card.appendChild(secMed);
+
+  // --- Capa administrativa ---
+  const secAdm = crearSeccion('📋', 'Capa administrativa (descifrada)');
+  if (bloques.ADM) {
+    try {
+      const plano = await descifrarCapa(bloques.ADM);
+      renderKV(secAdm, JSON.parse(plano));
+    } catch (e) {
+      secAdm.appendChild(mensajeError('No se pudo descifrar ADM', e.message));
+    }
+  } else {
+    secAdm.appendChild(mensajeInfo('(vacía)'));
+  }
+  card.appendChild(secAdm);
+
+  // --- Verificaciones ---
+  const secVerif = crearSeccion('🔐', 'Verificaciones');
+
+  // SHA
+  if (bloques.SHA) {
+    try {
+      const pubJson = bloques.PUB;
+      const medJson = bloques.MED ? await descifrarCapa(bloques.MED) : '';
+      const admJson = bloques.ADM ? await descifrarCapa(bloques.ADM) : '';
+
+      const hPub = await sha256Hex(pubJson);
+      const hMed = medJson ? await sha256Hex(medJson) : '';
+      const hAdm = admJson ? await sha256Hex(admJson) : '';
+      const hMaestro = await sha256Hex(hPub + hMed + hAdm);
+
+      const shaPayload = bloques.SHA;
+      const coincide = shaPayload.length === 64
+        ? hMaestro === shaPayload
+        : hMaestro.startsWith(shaPayload);
+
+      secVerif.appendChild(crearCheckRow(
+        coincide ? 'ok' : 'err',
+        coincide ? 'Integridad SHA-256 OK' : 'Integridad SHA-256 FALLÓ',
+        `Payload: ${shaPayload.slice(0, 16)}…  ·  Recalc: ${hMaestro.slice(0, 16)}…`
+      ));
+    } catch (e) {
+      secVerif.appendChild(crearCheckRow('warn', 'No se pudo verificar SHA-256', e.message));
+    }
+  } else {
+    secVerif.appendChild(crearCheckRow('warn', 'Sin hash SHA-256 en el payload', ''));
+  }
+
+  // Firma
+  if (bloques.SIG) {
+    const mensaje = `PUB:${bloques.PUB}|MED:${bloques.MED}|ADM:${bloques.ADM}|SHA:${bloques.SHA}`;
+    const res = await verificarEd25519(mensaje, bloques.SIG);
+    if (res.noSoportado) {
+      secVerif.appendChild(crearCheckRow('warn', 'Ed25519 no soportado en este navegador', res.motivo));
+    } else {
+      secVerif.appendChild(crearCheckRow(
+        res.ok ? 'ok' : 'err',
+        res.ok ? 'Firma Ed25519 OK' : 'Firma Ed25519 FALLÓ',
+        res.motivo
+      ));
+    }
+  } else {
+    secVerif.appendChild(crearCheckRow('warn', 'Sin firma Ed25519 (formato legacy)', ''));
+  }
+
+  card.appendChild(secVerif);
+
+  // --- Botón limpiar ---
+  const btnLimpiar = document.createElement('button');
+  btnLimpiar.className = 'btn secondary';
+  btnLimpiar.textContent = '↺ Escanear otro';
+  btnLimpiar.style.marginTop = '12px';
+  btnLimpiar.onclick = () => {
+    cont.innerHTML = '';
+    clearStatusMsg();
+  };
+  card.appendChild(btnLimpiar);
+
+  cont.appendChild(card);
+}
+
+// --- Cámara + escaneo ---
+async function iniciarCamara() {
+  const video = document.getElementById('video');
+  const container = document.getElementById('video-container');
+  const btnStart = document.getElementById('btn-start');
+  const btnRowStop = document.getElementById('btn-row-stop');
+
+  btnStart.disabled = true;
+  btnStart.innerHTML = '<span class="spinner"></span> Iniciando…';
+  setStatusMsg('Iniciando cámara…');
+
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    });
+    video.srcObject = videoStream;
+    container.style.display = 'block';
+    btnStart.classList.add('hidden');
+    btnRowStop.classList.remove('hidden');
+
+    // Iniciar lector ZXing
+    const hints = new Map();
+    const formats = [
+      ZXing.BarcodeFormat.DATA_MATRIX,
+      ZXing.BarcodeFormat.QR_CODE,
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+    codeReader = new ZXing.BrowserMultiFormatReader(hints);
+    scanning = true;
+
+    setStatusMsg('🔍 Buscando Data Matrix… apunta la cámara al código', 'warn');
+    let segundos = 0;
+    scanTimeout = setInterval(() => {
+      segundos++;
+      if (segundos < 5) {
+        setStatusMsg(`🔍 Buscando… (${segundos}s)`, 'warn');
+      } else if (segundos < 10) {
+        setStatusMsg(`🔍 No detectado. Acerca más la cámara o mejora la iluminación. (${segundos}s)`, 'warn');
+      } else if (segundos < 20) {
+        setStatusMsg(`🔍 Aún buscando… Prueba con el botón "Subir imagen". (${segundos}s)`, 'warn');
+      } else {
+        setStatusMsg('⏱ Tiempo de escaneo largo. Detén la cámara y sube una imagen.', 'err');
+      }
+    }, 1000);
+
+    codeReader.decodeFromVideoElement(video, (result, err) => {
+      if (!scanning) return;
+      if (result) {
+        scanning = false;
+        clearInterval(scanTimeout);
+        const texto = result.getText();
+        setStatusMsg('✅ Código detectado. Procesando…', 'ok');
+        detenerCamara();
+        setTimeout(() => renderizarResultado(texto), 300);
+      }
+    });
+  } catch (e) {
+    btnStart.disabled = false;
+    btnStart.textContent = '▶ Iniciar cámara y escanear';
+    setStatusMsg('❌ No se pudo acceder a la cámara', 'err');
+    const cont = document.getElementById('resultado-container');
+    cont.innerHTML = '';
+    cont.appendChild(mensajeError(
+      'No se pudo acceder a la cámara',
+      e.message + '. Verifica permisos y que uses HTTPS o localhost.'
+    ));
+  }
+}
+
+function detenerCamara() {
+  scanning = false;
+  if (scanTimeout) { clearInterval(scanTimeout); scanTimeout = null; }
+  if (codeReader) {
+    try { codeReader.reset(); } catch {}
+    codeReader = null;
+  }
+  if (videoStream) {
+    videoStream.getTracks().forEach(t => t.stop());
+    videoStream = null;
+  }
+  document.getElementById('video-container').style.display = 'none';
+  document.getElementById('btn-start').classList.remove('hidden');
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-start').textContent = '▶ Iniciar cámara y escanear';
+  document.getElementById('btn-row-stop').classList.add('hidden');
+}
+
+// --- Subir imagen (estrategia dual: imagen completa + crop 70%) ---
+async function procesarImagenSubida(file) {
+  clearStatusMsg();
+  setStatusMsg('📁 Procesando imagen…');
+
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = async () => {
+    URL.revokeObjectURL(url);
+
+    const hints = new Map();
+    const formats = [
+      ZXing.BarcodeFormat.DATA_MATRIX,
+      ZXing.BarcodeFormat.QR_CODE,
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+    // Intento 1: imagen completa
+    let reader = new ZXing.BrowserMultiFormatReader(hints);
+    try {
+      const result = await reader.decodeFromImageElement(img);
+      setStatusMsg('✅ Código detectado. Procesando…', 'ok');
+      setTimeout(() => renderizarResultado(result.getText()), 200);
+      return;
+    } catch (e) {
+      // Continúa al intento 2
+    }
+
+    // Intento 2: recortar el 70% central
+    setStatusMsg('🔍 Reintentando con recorte central…', 'warn');
+    try {
+      const canvas = document.createElement('canvas');
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      const cropSize = Math.floor(Math.min(w, h) * 0.70);
+      const cropX = Math.floor((w - cropSize) / 2);
+      const cropY = Math.floor((h - cropSize) / 2);
+      canvas.width = cropSize;
+      canvas.height = cropSize;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, cropSize, cropSize);
+
+      reader = new ZXing.BrowserMultiFormatReader(hints);
+      const result = await reader.decodeFromCanvas(canvas);
+      setStatusMsg('✅ Código detectado (con recorte). Procesando…', 'ok');
+      setTimeout(() => renderizarResultado(result.getText()), 200);
+    } catch (e) {
+      setStatusMsg('❌ No se detectó código en la imagen', 'err');
+      const cont = document.getElementById('resultado-container');
+      cont.innerHTML = '';
+      cont.appendChild(mensajeError(
+        'No se detectó código',
+        'Asegúrate de que la imagen contiene un Data Matrix visible. Intenta con una foto más nítida y con buena iluminación.'
+      ));
+    }
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    setStatusMsg('❌ No se pudo leer la imagen', 'err');
+  };
+  img.src = url;
+}
+
+// --- Inicialización ---
+document.addEventListener('DOMContentLoaded', () => {
+  actualizarEstadoConexion();
+  document.getElementById('btn-start').addEventListener('click', iniciarCamara);
+  document.getElementById('btn-stop').addEventListener('click', detenerCamara);
+  document.getElementById('btn-upload').addEventListener('click', () => {
+    document.getElementById('file-input').click();
+  });
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) procesarImagenSubida(file);
+  });
+
+  // Verificar soporte de zlib
+  if (typeof DecompressionStream === 'undefined') {
+    const aviso = document.getElementById('aviso-llaves');
+    aviso.className = 'alert warn';
+    aviso.innerHTML = '<span class="icon">⚠️</span><div><strong>Navegador no soporta DecompressionStream.</strong> Necesitas Chrome 80+, Edge 80+, Safari 16.4+ o Firefox 113+. No podrás descifrar capas con zlib.</div>';
+  }
+
+  // Verificar contexto seguro
+  if (!window.isSecureContext) {
+    const aviso = document.getElementById('aviso-llaves');
+    aviso.className = 'alert warn';
+    aviso.innerHTML = '<span class="icon">🔒</span><div><strong>Contexto no seguro.</strong> La cámara solo funciona en HTTPS o localhost. Abre esta PWA desde <code>http://localhost:8000</code> o desde un dominio HTTPS.</div>';
+  }
+
+  setStatusMsg('Listo. Pulsa "Iniciar cámara" o "Subir imagen".');
+});
+</script>
+
+</body>
+</html>
