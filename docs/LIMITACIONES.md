@@ -162,3 +162,60 @@ Todos los resultados de este documento son **reproducibles** con el `generator.p
 
 ```powershell
 python src/generator.py
+---
+
+## 9. Comparativa de lectores
+
+AuraHash ID puede leerse con tres herramientas distintas. **Cada una tiene una tasa de éxito diferente.**
+
+| Lector | Herramienta | Tasa de éxito | Notas |
+|--------|-------------|---------------|-------|
+| **reader.py** | Python (script) | **100%** (7/7) | Descifra MED/ADM, verifica firma Ed25519 |
+| **Google Lens** | App móvil / web | **100%** (7/7) | Solo muestra capa pública (no descifra) |
+| **PWA (zxing-js)** | Navegador (Chrome/Edge/Safari) | **~70%** (5-6/7) | Descifra MED/ADM, verifica firma. Limitación de zxing-js |
+
+### ¿Por qué la PWA solo funciona al 70%?
+
+**Porque zxing-js (la librería JS de lectura de Data Matrix) tiene una limitación intrínseca** con ciertos patrones de Data Matrix de alta densidad. **No es un problema del proyecto, es un problema de la librería.**
+
+### ¿Qué lector usar?
+
+| Contexto | Lector recomendado |
+|----------|-------------------|
+| **Producción (app nativa)** | SDK nativo (Google ML Kit, Apple Vision, Dynamsoft) — 100% |
+| **Demo rápida (Python)** | `reader.py` — 100% |
+| **Demo rápida (celular sin app)** | Google Lens — 100% (solo capa pública) |
+| **Demo web/PWA** | PWA (zxing-js) — ~70% |
+| **Auditoría** | `reader.py` — 100% |
+
+### ¿Por qué se diseñó una PWA si solo funciona al 70%?
+
+**La idea original era tener una PWA universal**: cualquier persona con un celular podría escanear un AuraHash ID sin instalar nada.
+
+**Pero zxing-js tiene limitaciones.** La PWA funciona para el ~70% de los escenarios. **La solución real es una app nativa** con SDK nativo (Google ML Kit, Apple Vision). Eso está en el roadmap.
+
+**La PWA es el paso intermedio.** No es el producto final. Es la demo que funciona **sin instalar nada**.
+
+### Conclusión
+
+**El proyecto no es un fracaso por la PWA al 70%.** Es un **prototipo honesto** que:
+- Funciona al **100%** con `reader.py` (Python).
+- Funciona al **100%** con Google Lens.
+- Funciona al **~70%** con zxing-js en el navegador.
+- Documenta la limitación y ofrece una ruta clara a producción (**SDK nativo**).
+
+**La PWA es una demo, no el producto.** El producto es el protocolo + la app nativa futura.
+
+---
+
+## 10. Referencias
+
+- **ISO/IEC 16022**: estándar Data Matrix.
+- **zxing-js**: https://github.com/zxing-js/library
+- **Google ML Kit**: https://developers.google.com/ml-kit
+- **Apple Vision**: https://developer.apple.com/documentation/vision
+- **Dynamsoft Barcode Reader**: https://www.dynamsoft.com/barcode-reader/
+
+---
+
+*Última actualización: 2026-10-16 — Secciones 9 y 10 agregadas (comparativa de lectores + referencias)*

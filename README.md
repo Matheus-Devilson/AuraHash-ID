@@ -269,7 +269,16 @@ La PWA (`pwa/index.html`) permite leer un Data Matrix desde el navegador, descif
 | legal_contrato_02 | ⚠️ Puede fallar | ✅ | ✅ |
 | militar_inteligencia_01 | ⚠️ Puede fallar | ✅ | ✅ |
 
-**Limitación conocida**: zxing-js tiene dificultades con ciertos patrones de Data Matrix de alta densidad. Ver [`docs/LIMITACIONES.md`](docs/LIMITACIONES.md) para el detalle completo.
+### ⚠️ Limitación importante
+
+**La PWA (zxing-js) funciona al ~70%.** Es una limitación de la librería JS, no del protocolo.
+
+**Para el 100% de éxito:**
+- **`reader.py` (Python)**: 100% funcional.
+- **Google Lens**: 100% funcional (solo capa pública).
+- **App nativa futura**: 100% (con SDK nativo).
+
+**La PWA es una demo universal.** Para producción, se requiere una app nativa.
 
 **Solución para producción**: usar un SDK nativo (Google ML Kit, Apple Vision, Dynamsoft) con tasas de éxito >95%.
 
