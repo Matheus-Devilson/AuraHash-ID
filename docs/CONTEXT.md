@@ -1,6 +1,6 @@
 # AuraHash ID — Prompt Maestro
 
-> **Propósito de este archivo:** briefing estático del proyecto para que cualquier IA (o humano) pueda retomarlo sin contexto previo. No contiene estado vivo (eso vive en `docs/MINI-CONTEXTO_v3.txt`). Este documento cambia solo cuando cambia la arquitectura, filosofía o reglas operativas.
+> **Propósito de este archivo:** briefing estático del proyecto por si quieres que cualquier IA (o humano) pueda retomarlo sin contexto previo. No contiene estado vivo. Este documento cambia solo cuando cambia la arquitectura, filosofía o reglas operativas.
 
 ---
 
@@ -94,7 +94,7 @@ AuraHash-ID/
 │   └── .gitkeep
 ├── docs/
 │   ├── AI_CONTEXT.md        # Este archivo
-│   └── MINI-CONTEXTO_v3.txt # Estado vivo del proyecto
+│   └── CONTEXTO.txt         # Estado vivo del proyecto
 ├── backups/                 # Backups locales (ignorado por git)
 ├── .gitignore
 ├── LICENSE                  # MIT
@@ -126,10 +126,9 @@ Al trabajar en este proyecto, respetar:
 4. **Verificar** con `Select-String` o `python -c` después de cada cambio.
 5. **Commits atómicos:** un commit + push por cada pendiente terminado. No acumular.
 6. **Sin saludos ni relleno.** Directo al grano.
-7. **Código completo, sin `...`.** El usuario no es programador profesional; guiarlo paso a paso con comandos exactos.
+7. **Código completo, sin `...`.** guiarlo paso a paso con comandos exactos.
 8. **Explicar términos técnicos brevemente** cuando aparezcan por primera vez.
-9. **Nunca heredar métricas de contexto entre chats.** Cada chat empieza en N1 (0-25%).
-10. **Cero invención de detalles** (rutas, comandos, hashes). Si no se sabe, se verifica.
+9. **Cero invención de detalles** (rutas, comandos, hashes). Si no se sabe, se verifica.
 
 ---
 
@@ -143,7 +142,7 @@ Al trabajar en este proyecto, respetar:
 5. Probar funcionalidad end-to-end
 6. Limpiar archivos temporales de prueba
 7. git add + git commit + git push
-8. Actualizar docs/MINI-CONTEXTO_v3.txt si corresponde
+8. Actualizar docs/CONTEXT.txt si corresponde
 ```
 
 ---
@@ -192,7 +191,7 @@ El documento `docs/VISION_COMERCIAL.md` contiene el **discurso de presentación*
 
 AuraHash ID hoy es **MVP funcional + visión documentada**. NO es:
 - Un producto listo para vender.
-- Un reemplazo de Ticketmaster / ODESA.
+- Un reemplazo de Promotoras de Eventos.
 - Una solución completa sin integración.
 
 Lo que ofrece:
