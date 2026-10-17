@@ -1,9 +1,8 @@
-=== MINI-CONTEXTO FINAL (v6) ===
-
+=== CONTEXTO FINAL (v6) ===
+*contexto por si quieres retomar con IA (o humano)
+*contexto flujo de trabajo con IA (o humano)
 PROYECTO: AuraHash ID
-RUTA: C:\Users\erasn\Proyectos\AuraHash-ID
 HEAD: d43bbfd (origin/main, origin/HEAD)
-GITHUB: https://github.com/Matheus-Devilson/AuraHash-ID (privado)
 
 --- ESTADO: PROYECTO CERRADO v3.0.1 ---
 El proyecto esta funcional, documentado y pusheado.
@@ -75,7 +74,7 @@ Ultimos backups:
 1. Codigo completo (no fragmentos).
 2. Backup antes de cambios.
 3. Commit + push por pendiente terminado.
-4. Actualizar este mini-contexto si cambia el estado.
+4. Actualizar este contexto si cambia el estado.
 
 --- REGLAS OPERATIVAS ---
 - PowerShell 5.1: maximo 5-6 lineas por bloque.
@@ -84,7 +83,6 @@ Ultimos backups:
 - Editar archivos .md, .py, .txt en VS Code.
 - Cero saludos, directo al grano.
 - Codigo completo, sin "...".
-- Usuario NO es programador profesional.
 - Cero invencion de detalles.
 
 --- IDIOMA Y TONO ---
@@ -96,6 +94,6 @@ El proyecto esta cerrado. Funciona para 5-6 de 7 escenarios con
 zxing-js, y para el 100% con lectores nativos.
 Documentacion completa. Backups en backups/. Todo pusheado a GitHub.
 
-Para retomar: leer este mini-contexto + docs/LIMITACIONES.md.
+Para retomar: leer este contexto + docs/LIMITACIONES.md.
 
-=== FIN DEL MINI-CONTEXTO v6 ===
+=== FIN DEL CONTEXTO v6 ===
