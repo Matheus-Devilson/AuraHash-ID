@@ -1,4 +1,4 @@
-# AuraHash ID — Prompt Maestro para IA
+# AuraHash ID — Prompt Maestro
 
 > **Propósito de este archivo:** briefing estático del proyecto para que cualquier IA (o humano) pueda retomarlo sin contexto previo. No contiene estado vivo (eso vive en `docs/MINI-CONTEXTO_v3.txt`). Este documento cambia solo cuando cambia la arquitectura, filosofía o reglas operativas.
 
@@ -116,7 +116,7 @@ AuraHash-ID/
 
 ---
 
-## 7. Reglas Operativas para IA
+## 7. Reglas Operativas
 
 Al trabajar en este proyecto, respetar:
 
