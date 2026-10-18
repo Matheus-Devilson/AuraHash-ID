@@ -10,7 +10,7 @@
 
 **El boleto es un activo controlado por el emisor, no propiedad absoluta del comprador.**
 
-El comprador posee el boleto temporalmente. El emisor (ODESA, Ticketmaster, promotor) mantiene:
+El comprador posee el boleto temporalmente. El emisor (Promotor de espectaulos) mantiene:
 
 - La potestad de **cancelarlo** (si hay reembolso).
 - La potestad de **re-emitirlo** a otro comprador.
@@ -25,8 +25,8 @@ El comprador posee el boleto temporalmente. El emisor (ODESA, Ticketmaster, prom
 
 | Actor | Rol |
 |-------|-----|
-| **Promotor** | ODESA, Ticketmaster, Live Nation, venue independiente |
-| **Comprador** | Ana, 34 años, quiere ver a NOVA |
+| **Promotor** | Promotora de espctaculos, venue independiente |
+| **Comprador** | Ana, quiere ver a su artista favorito |
 | **Revendedor** | Formal o informal (el problema a mitigar) |
 | **Staff de acceso** | El de la fila, con pistola digital |
 | **Supervisor** | Backstage, resuelve conflictos |
@@ -45,8 +45,8 @@ El comprador posee el boleto temporalmente. El emisor (ODESA, Ticketmaster, prom
   - `tipo: EVENTO_ANUNCIO`
   - `evento`, `fecha`, `venue`, `ciudad`
   - `url_oficial: https://odesa.mx/nova`
-  - `emisor: ODESA`
-  - Firma Ed25519 de ODESA
+  - `emisor: Promotra de espectaculos`
+  - Firma Ed25519 de Promotora de Espectaculos
 - **Función:**
   - Verificar que el anuncio es oficial (no fake).
   - Redirigir a la web de venta oficial.
@@ -71,13 +71,13 @@ El comprador posee el boleto temporalmente. El emisor (ODESA, Ticketmaster, prom
 
 ### 4.1 — Compra digital (web/app)
 
-1. Ana entra a `odesa.mx/nova`.
+1. Ana entra a `pagpromotora.mx/evento`.
 2. Selecciona evento, sección, asiento.
 3. Introduce su INE: número + nombre completo.
 4. El sistema le **muestra la política de reembolso** antes del pago.
 5. Ana acepta.
 6. Paga (tarjeta, SPEI, OXXO).
-7. **Sistema emisor (ODESA):**
+7. **Sistema emisor (Promotora de eventos):**
    - Genera `id_boleto` único (UUID).
    - Calcula `titular_hash = SHA-256(INE + nombre)`.
    - Aplica un AuraHash con:
@@ -88,7 +88,7 @@ El comprador posee el boleto temporalmente. El emisor (ODESA, Ticketmaster, prom
      - `titular_hash` (NO la INE en claro)
      - `politica_reembolso` (ver sección 5)
      - `folio`
-     - Firma Ed25519 de ODESA
+     - Firma Ed25519 de Promotora de eventos
 8. Ana recibe:
    - Boleto digital (PDF con Data Matrix).
    - Opción de imprimir en físico.
@@ -124,7 +124,7 @@ El comprador posee el boleto temporalmente. El emisor (ODESA, Ticketmaster, prom
   "costo_adicional_mxn": 100,
   "ventana_gratis_horas": 48,
   "ventana_pago_hasta_minutos": 15,
-  "nota": "Unico e intransferible. Reembolso gratis hasta 48h antes. Despues, hasta 15 min antes con cargo de $100 MXN."
+  "nota": "Unico e intransferible. Reembolso gratis hasta 48h antes. Despues, hasta 15 min antes con cargo de $ MXN."
 }
 ```
 
@@ -203,7 +203,7 @@ En la entrada:
 
 El promotor puede habilitar **transferencia oficial:**
 
-1. Ana entra a su cuenta ODESA, libera el boleto.
+1. Ana entra a su cuenta Promotoria de eventos, libera el boleto.
 2. Otro usuario lo reclama.
 3. **Se re-emite con su propio `titular_hash`.**
 4. El boleto original queda invalidado en el sistema.
@@ -226,7 +226,7 @@ El promotor puede habilitar **transferencia oficial:**
 5. La pistola lee el payload y muestra:
    - Nombre parcial: "Ana E***".
    - Sección A, asiento 4.
-   - Evento: NOVA Eclipse.
+   - Evento: ej:NOVA Eclipse Tour.
    - Firma Ed25519: OK (boleto legítimo).
    - Estado: válido (no usado, no cancelado).
 6. Staff escanea la INE de Ana (o introduce número).
