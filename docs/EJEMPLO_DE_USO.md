@@ -379,6 +379,88 @@ Solución:
 Reinstala Python y marca "Add Python to PATH".
 
 O usa py en lugar de python.
+---
+
+## 11. Crear una pulsera de contacto (caso de uso real)
+
+Si quieres crear una pulsera para un niño, una mascota o un adulto mayor, **no necesitas editar JSON ni tocar código**. Usa el script interactivo `crear_contacto.py`.
+
+### Paso 1: Ejecutar el script
+
+```powershell
+cd C:\Users\erasn\Proyectos\AuraHash-ID
+python src/crear_contacto.py
+Paso 2: Responder las preguntas
+El script te guiará paso a paso:
+
+text
+--- ¿Para quién es? ---
+1. Niño
+2. Mascota
+3. Adulto mayor
+4. Otro
+Elige (1-4): 1
+
+--- Datos del titular ---
+Nombre de pila: Carlos
+Instrucción de emergencia: Hola, me llamo Carlos y me perdí. Por favor llama a mi familia.
+Descripción adicional: Tengo 10 años
+ID visual: NIÑO-2026-001
+
+--- Datos del tutor/contacto ---
+Nombre del tutor: Lorena Martinez
+Parentesco: Madre
+Teléfono principal: +52-55-9876-5432
+Teléfono alternativo: (opcional)
+Notas adicionales: (opcional)
+Puedes pulsar Enter para usar los valores por defecto (los que aparecen entre corchetes).
+
+Paso 3: Obtener la imagen
+El script generará automáticamente:
+
+text
+✓ Imagen generada: output/aura_contacto_nino_personalizado.png
+Paso 4: Imprimir y usar
+Abre la imagen en el explorador de Windows.
+
+Imprímela en una pulsera, sticker, o tarjeta.
+
+Pégala en la muñeca del niño, mochila, o ropa.
+
+Cualquiera puede escanearla con Google Lens para ver el contacto.
+
+Qué datos se guardan
+Capa	Datos	¿Visible con Google Lens?
+Pública	Nombre, instrucción, descripción, ID visual	✅ Sí
+Administrativa	Tutor, parentesco, teléfonos, notas	❌ No (cifrado)
+Ventaja: el teléfono del tutor no es visible con Google Lens. Solo con la PWA o reader.py (que tienen la llave AES-256).
+
+Ejemplo de uso
+Escenario: un padre crea una pulsera para su hijo Carlos.
+
+Ejecuta python src/crear_contacto.py.
+
+Responde las preguntas con los datos de Carlos.
+
+Obtiene output/aura_contacto_nino_personalizado.png.
+
+Imprime la imagen en una pulsera.
+
+Se la pone a Carlos en la muñeca.
+
+Carlos se pierde en un parque.
+
+Alguien lo encuentra y escanea la pulsera con Google Lens.
+
+Ve: "Hola, me llamo Carlos y me perdí. Por favor llama a mi familia."
+
+No ve el teléfono del tutor (está cifrado).
+
+Pero puede llamar a la policía, o usar la PWA (si la tiene) para descifrar el teléfono.
+
+Alternativa: el padre puede configurar la capa pública para incluir el teléfono directamente (sin cifrar). Pero entonces cualquiera podría verlo.
+
+Balance: privacidad vs accesibilidad. El diseño actual permite ambas opciones.
 
 Resumen rápido de comandos
 Acción	Comando
