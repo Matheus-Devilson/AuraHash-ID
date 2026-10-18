@@ -22,6 +22,8 @@
 >
 > **¿Buscas las limitaciones conocidas?** Lee [`docs/LIMITACIONES.md`](docs/LIMITACIONES.md).
 
+>**¿Buscas una guia completa como se usa?** Lee[`docs/EJEMPLO_DE_USO.md`](docs/EJEMPLO_DE_USO.md) para una guía paso a paso.
+
 ---
 
 ## 📖 ¿Qué es AuraHash ID?
