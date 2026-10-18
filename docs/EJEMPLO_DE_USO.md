@@ -380,15 +380,12 @@ Solución:
 Reinstala Python y marca "Add Python to PATH".
 
 O usa py en lugar de python.
----
 
-## 11. Crear una pulsera de contacto (caso de uso real)
+11. Crear una pulsera de contacto (caso de uso real)
+Si quieres crear una pulsera para un niño, una mascota o un adulto mayor, no necesitas editar JSON ni tocar código. Usa el script interactivo crear_contacto.py.
 
-Si quieres crear una pulsera para un niño, una mascota o un adulto mayor, **no necesitas editar JSON ni tocar código**. Usa el script interactivo `crear_contacto.py`.
-
-### Paso 1: Ejecutar el script
-
-```powershell
+Paso 1: Ejecutar el script
+powershell
 cd C:\Users\erasn\Proyectos\AuraHash-ID
 python src/crear_contacto.py
 Paso 2: Responder las preguntas
@@ -474,4 +471,5 @@ Leer payload	python src/reader.py
 Iniciar PWA	cd pwa; python -m http.server 8000
 Abrir PWA	Chrome → http://localhost:8000
 Verificar estado	git log --oneline -3; git status
-Última actualización: 2026-10-17
+Crear pulsera personalizada	python src/crear_contacto.py
+Última actualización: 2026-10-18
