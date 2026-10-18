@@ -16,6 +16,7 @@
 8. [Probar desde el celular (misma red WiFi)](#8-probar-desde-el-celular-misma-red-wifi)
 9. [Personalizar tus propios datos](#9-personalizar-tus-propios-datos)
 10. [Solución de problemas](#10-solución-de-problemas)
+11. [Crear una pulsera de contacto (caso de uso real)](#11-crear-una-pulsera-de-contacto-caso-de-uso-real)
 
 ---
 
