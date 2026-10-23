@@ -1,10 +1,24 @@
 """
-AuraHash ID - Generador Universal v3.0.9
+AuraHash ID - Generador Universal v3.0.1
 ==========================================
 
-Cambios v3.0.9:
-  - Textos inferiores centrados en la imagen.
-  - QR abajo a la izquierda, alineado con el Data Matrix.
+Cambios v3.0.1:
+  - Nonce determinista derivado de id_escenario + contenido comprimido.
+    ANTES: nonce = secrets.token_bytes(12) (aleatorio) -> cada regeneracion
+    producia un Data Matrix diferente, y algunos fallaban al azar.
+    AHORA: nonce = sha256(id_escenario + '::' + comprimido)[:12] -> el
+    resultado es reproducible. Si funciona hoy, funciona manana.
+  - Esto elimina la aleatoriedad del ciphertext y, por tanto, del Data Matrix
+    y del Aura.
+
+Cambios v3.0.0:
+  - Aura DECORATIVA de fondo, opacidad al 5%.
+  - Data Matrix con zona de silencio blanca amplia (QUIET_ZONE=40px).
+  - Payload COMPLETO siempre (PUB + MED + ADM + SHA + SIG).
+  - Eliminado el modo --demo.
+
+Uso:
+    python src/generator.py
 """
 
 import json
@@ -20,6 +34,7 @@ from PIL import Image, ImageDraw, ImageFont
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+
 # =====================================================================
 # CONFIGURACION GLOBAL
 # =====================================================================
@@ -33,13 +48,16 @@ ED25519_PRIV_FILE = BASE_DIR / "keys" / "ed25519_private.key"
 AES_KEY_BYTES = 32
 GCM_NONCE_BYTES = 12
 PREFIJO_CIFRADO_ZLIB = "AES256GCMZ:"
+
 SHA_PAYLOAD_HEX = 32
 
-IMG_WIDTH = 1400
-IMG_HEIGHT = 1600
+IMG_WIDTH = 1200
+IMG_HEIGHT = 1400
 DM_SIZE = 800
 DM_QUIET_ZONE_PX = 40
-QR_SIZE = 200
+
+# Opacidad del Aura de fondo.
+# Validado por barrido: 5% funciona para los 7 escenarios con nonce determinista.
 AURA_OPACIDAD = 0.05
 
 COLOR_BG = (255, 255, 255)
@@ -55,12 +73,18 @@ AURA_PALETTE = [
 ]
 
 MAPA_CLAVES_PUB = {
-    "perfil": "p", "tipo": "t", "instruccion": "i", "nombre_pila": "n",
-    "alergias_criticas": "a", "id_visual": "v", "evento": "e",
+    "perfil": "p",
+    "tipo": "t",
+    "instruccion": "i",
+    "nombre_pila": "n",
+    "alergias_criticas": "a",
+    "id_visual": "v",
+    "evento": "e",
 }
 
+
 # =====================================================================
-# CIFRADO AES-256-GCM + ZLIB
+# CIFRADO AES-256-GCM + ZLIB (NONCE DETERMINISTA)
 # =====================================================================
 
 def cargar_clave_aes() -> bytes:
@@ -68,20 +92,33 @@ def cargar_clave_aes() -> bytes:
         raise FileNotFoundError(f"No se encontro la clave AES en: {KEY_FILE}")
     clave = KEY_FILE.read_bytes()
     if len(clave) != AES_KEY_BYTES:
-        raise ValueError(f"La clave AES debe tener {AES_KEY_BYTES} bytes, tiene {len(clave)}.")
+        raise ValueError(
+            f"La clave AES debe tener {AES_KEY_BYTES} bytes, tiene {len(clave)}."
+        )
     return clave
 
+
 def cifrar_capa(texto: str, id_escenario: str = "") -> str:
+    """
+    Cifra un texto con AES-256-GCM tras comprimirlo con zlib.
+    Nonce determinista: sha256(id_escenario + '::' + comprimido)[:12].
+    Esto garantiza reproducibilidad. Mismo input -> mismo output.
+    """
     if not texto:
         return ""
     clave = cargar_clave_aes()
     aesgcm = AESGCM(clave)
     plano_comprimido = zlib.compress(texto.encode("utf-8"), level=9)
-    nonce = hashlib.sha256((id_escenario + '::').encode('utf-8') + plano_comprimido).digest()[:GCM_NONCE_BYTES]
+
+    nonce = hashlib.sha256(
+        (id_escenario + '::').encode('utf-8') + plano_comprimido
+    ).digest()[:GCM_NONCE_BYTES]
+
     ciphertext_con_tag = aesgcm.encrypt(nonce, plano_comprimido, None)
     paquete = nonce + ciphertext_con_tag
     b64 = base64.b64encode(paquete).decode("ascii")
     return PREFIJO_CIFRADO_ZLIB + b64
+
 
 # =====================================================================
 # FIRMA DIGITAL ED25519
@@ -92,8 +129,11 @@ def cargar_llave_ed25519_privada():
         return None
     priv_bytes = ED25519_PRIV_FILE.read_bytes()
     if len(priv_bytes) != 32:
-        raise ValueError(f"La llave privada Ed25519 debe tener 32 bytes, tiene {len(priv_bytes)}.")
+        raise ValueError(
+            f"La llave privada Ed25519 debe tener 32 bytes, tiene {len(priv_bytes)}."
+        )
     return Ed25519PrivateKey.from_private_bytes(priv_bytes)
+
 
 def firmar_payload(mensaje: str, priv_key) -> str:
     if priv_key is None:
@@ -102,8 +142,9 @@ def firmar_payload(mensaje: str, priv_key) -> str:
     b64 = base64.b64encode(firma_bytes).decode("ascii")
     return f"|SIG:{b64}"
 
+
 # =====================================================================
-# MINIFICACION
+# MINIFICACION DE LA CAPA PUBLICA
 # =====================================================================
 
 def minificar_capa_publica(capa: dict) -> dict:
@@ -111,54 +152,71 @@ def minificar_capa_publica(capa: dict) -> dict:
         return capa
     return {MAPA_CLAVES_PUB.get(k, k): v for k, v in capa.items()}
 
+
 # =====================================================================
-# AURA ESTOCASTICA
+# AURA ESTOCASTICA (DECORATIVA - FONDO)
 # =====================================================================
 
 def generar_aura_fondo(hash_hex: str, ancho: int, alto: int) -> Image.Image:
+    """
+    Genera el Aura decorativa de fondo al AURA_OPACIDAD (5%).
+    El patron es determinista (sha256 del payload) pero la opacidad lo
+    hace sutil para no interferir con zxing-js.
+    """
     semilla = int(hash_hex[:16], 16)
     rng = np.random.default_rng(semilla)
+
     ruido_brillo = rng.random((alto, ancho))
+
     indice_color = semilla % len(AURA_PALETTE)
     color_base = AURA_PALETTE[indice_color]
+
     fondo_oscuro = np.array((10, 10, 20), dtype=float)
     color = np.array(color_base, dtype=float)
+
     factor = ruido_brillo[..., np.newaxis] ** 2.5
     aura_full = fondo_oscuro + (color - fondo_oscuro) * factor
-    aura_mezclada = np.array((255, 255, 255), dtype=float) * (1 - AURA_OPACIDAD) + aura_full * AURA_OPACIDAD
+
+    aura_mezclada = (
+        np.array((255, 255, 255), dtype=float) * (1 - AURA_OPACIDAD)
+        + aura_full * AURA_OPACIDAD
+    )
     matriz_rgb = np.clip(aura_mezclada, 0, 255).astype(np.uint8)
+
     return Image.fromarray(matriz_rgb, mode="RGB")
 
+
 # =====================================================================
-# DATA MATRIX Y QR
+# DATA MATRIX
 # =====================================================================
 
 def generar_data_matrix(texto: str, tamano: int) -> Image.Image:
     qr = segno.make(texto, micro=False)
     buffer = io.BytesIO()
-    qr.save(buffer, kind="png", scale=20, border=4, dark="black", light="white")
+    qr.save(
+        buffer,
+        kind="png",
+        scale=20,
+        border=4,
+        dark="black",
+        light="white",
+    )
     buffer.seek(0)
     dm_img = Image.open(buffer).convert("RGB")
     dm_img = dm_img.resize((tamano, tamano), Image.LANCZOS)
     return dm_img
 
-def generar_qr_auxiliar(texto: str, tamano: int) -> Image.Image:
-    qr = segno.make_qr(texto)
-    buffer = io.BytesIO()
-    qr.save(buffer, kind="png", scale=10, border=2, dark="black", light="white")
-    buffer.seek(0)
-    qr_img = Image.open(buffer).convert("RGB")
-    qr_img = qr_img.resize((tamano, tamano), Image.LANCZOS)
-    return qr_img
 
 # =====================================================================
-# FUENTE Y COMPOSICION
+# FUENTE
 # =====================================================================
 
 def obtener_fuente(tamano: int) -> ImageFont.ImageFont:
     candidatas = [
-        "C:/Windows/Fonts/consola.ttf", "C:/Windows/Fonts/cour.ttf",
-        "/System/Library/Fonts/Menlo.ttc", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "C:/Windows/Fonts/consola.ttf",
+        "C:/Windows/Fonts/cour.ttf",
+        "/System/Library/Fonts/Menlo.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
     ]
     for ruta in candidatas:
         try:
@@ -167,78 +225,101 @@ def obtener_fuente(tamano: int) -> ImageFont.ImageFont:
             continue
     return ImageFont.load_default()
 
-def componer_imagen(aura_fondo, data_matrix, hash_publico, id_escenario, sector, qr_auxiliar=None):
+
+# =====================================================================
+# COMPOSICION DE LA IMAGEN FINAL
+# =====================================================================
+
+def componer_imagen(
+    aura_fondo: Image.Image,
+    data_matrix: Image.Image,
+    hash_publico: str,
+    id_escenario: str,
+    sector: str,
+) -> Image.Image:
     lienzo = aura_fondo.copy()
     draw = ImageDraw.Draw(lienzo)
 
-    # --- DATA MATRIX CENTRAL ---
     dm_total = DM_SIZE + 2 * DM_QUIET_ZONE_PX
     dm_x = (IMG_WIDTH - dm_total) // 2
-    dm_y = 100
+    dm_y = 60
 
-    draw.rectangle([(dm_x, dm_y), (dm_x + dm_total, dm_y + dm_total)], fill=COLOR_BG)
+    draw.rectangle(
+        [(dm_x, dm_y), (dm_x + dm_total, dm_y + dm_total)],
+        fill=COLOR_BG,
+    )
+
     lienzo.paste(data_matrix, (dm_x + DM_QUIET_ZONE_PX, dm_y + DM_QUIET_ZONE_PX))
 
-    base_dm_y = dm_y + dm_total
+    texto_y = dm_y + dm_total + 30
 
-    # --- QR AUXILIAR (Abajo a la izquierda, alineado al borde del DM) ---
-    if qr_auxiliar:
-        qr_x = dm_x 
-        qr_y = base_dm_y + 30 
-        
-        draw.rectangle([(qr_x, qr_y), (qr_x + QR_SIZE, qr_y + QR_SIZE)], fill=COLOR_BG)
-        lienzo.paste(qr_auxiliar, (qr_x, qr_y))
-        draw.text((qr_x, qr_y + QR_SIZE + 10), "QR Rapido", fill=COLOR_TEXT, font=obtener_fuente(14))
-
-    # --- TEXTOS INFERIORES (Centrados en toda la imagen) ---
-    texto_y = base_dm_y + 40
-
-    fuente_titulo = obtener_fuente(40)
+    fuente_titulo = obtener_fuente(36)
     texto_titulo = "AuraHash ID"
     bbox = draw.textbbox((0, 0), texto_titulo, font=fuente_titulo)
     ancho_titulo = bbox[2] - bbox[0]
-    
-    fuente_sector = obtener_fuente(24)
+    draw.text(
+        ((IMG_WIDTH - ancho_titulo) // 2, texto_y),
+        texto_titulo,
+        fill=COLOR_TEXT,
+        font=fuente_titulo,
+    )
+    texto_y += 55
+
+    fuente_sector = obtener_fuente(22)
     texto_sector = f"[{sector.upper()}]"
-    bbox_sector = draw.textbbox((0, 0), texto_sector, font=fuente_sector)
-    ancho_sector = bbox_sector[2] - bbox_sector[0]
+    bbox = draw.textbbox((0, 0), texto_sector, font=fuente_sector)
+    ancho_sector = bbox[2] - bbox[0]
+    draw.text(
+        ((IMG_WIDTH - ancho_sector) // 2, texto_y),
+        texto_sector,
+        fill=COLOR_TEXT,
+        font=fuente_sector,
+    )
+    texto_y += 40
 
-    # Centrar el bloque de título y sector
-    ancho_bloque_texto = ancho_titulo + 20 + ancho_sector
-    x_texto = (IMG_WIDTH - ancho_bloque_texto) // 2
-
-    draw.text((x_texto, texto_y), texto_titulo, fill=COLOR_TEXT, font=fuente_titulo)
-    draw.text((x_texto + ancho_titulo + 20, texto_y + 10), texto_sector, fill=COLOR_TEXT, font=fuente_sector)
-    texto_y += 60
-
-    fuente_id = obtener_fuente(22)
+    fuente_id = obtener_fuente(20)
     texto_id = f"ID: {id_escenario}"
     bbox = draw.textbbox((0, 0), texto_id, font=fuente_id)
     ancho_id = bbox[2] - bbox[0]
-    x_id = (IMG_WIDTH - ancho_id) // 2 # Centrado
-    draw.text((x_id, texto_y), texto_id, fill=COLOR_TEXT_HASH, font=fuente_id)
-    texto_y += 40
+    draw.text(
+        ((IMG_WIDTH - ancho_id) // 2, texto_y),
+        texto_id,
+        fill=COLOR_TEXT_HASH,
+        font=fuente_id,
+    )
+    texto_y += 35
 
     fuente_hash = obtener_fuente(18)
     hash_truncado = hash_publico[:32].upper()
-    hash_formateado = " ".join(hash_truncado[i:i + 4] for i in range(0, len(hash_truncado), 4))
+    hash_formateado = " ".join(
+        hash_truncado[i:i + 4] for i in range(0, len(hash_truncado), 4)
+    )
     bbox = draw.textbbox((0, 0), hash_formateado, font=fuente_hash)
     ancho_hash = bbox[2] - bbox[0]
-    x_hash = (IMG_WIDTH - ancho_hash) // 2 # Centrado
-    draw.text((x_hash, texto_y), hash_formateado, fill=COLOR_TEXT_HASH, font=fuente_hash)
-    texto_y += 35
+    draw.text(
+        ((IMG_WIDTH - ancho_hash) // 2, texto_y),
+        hash_formateado,
+        fill=COLOR_TEXT_HASH,
+        font=fuente_hash,
+    )
+    texto_y += 30
 
     fuente_instr = obtener_fuente(16)
     texto_instr = "Escanee con Google Lens / WeChat / AuraHash PWA"
     bbox = draw.textbbox((0, 0), texto_instr, font=fuente_instr)
     ancho_instr = bbox[2] - bbox[0]
-    x_instr = (IMG_WIDTH - ancho_instr) // 2 # Centrado
-    draw.text((x_instr, texto_y), texto_instr, fill=COLOR_TEXT, font=fuente_instr)
+    draw.text(
+        ((IMG_WIDTH - ancho_instr) // 2, texto_y),
+        texto_instr,
+        fill=COLOR_TEXT,
+        font=fuente_instr,
+    )
 
     return lienzo
 
+
 # =====================================================================
-# PROCESAR ESCENARIO
+# SERIALIZACION CANONICA
 # =====================================================================
 
 def serializar_capa(capa) -> str:
@@ -246,7 +327,12 @@ def serializar_capa(capa) -> str:
         return ""
     return json.dumps(capa, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
 
-def procesar_escenario(escenario, priv_key):
+
+# =====================================================================
+# PROCESAR UN ESCENARIO
+# =====================================================================
+
+def procesar_escenario(escenario: dict, priv_key) -> Path:
     id_escenario = escenario["id"]
     sector = escenario.get("sector", "general")
     capa_publica = escenario.get("capa_publica")
@@ -263,20 +349,32 @@ def procesar_escenario(escenario, priv_key):
     json_admin = cifrar_capa(json_admin_plano, id_escenario)
 
     hash_publica = hashlib.sha256(json_publica.encode("utf-8")).hexdigest()
-    hash_medica = hashlib.sha256(json_medica_plano.encode("utf-8")).hexdigest() if json_medica_plano else ""
-    hash_admin = hashlib.sha256(json_admin_plano.encode("utf-8")).hexdigest() if json_admin_plano else ""
+    hash_medica = (
+        hashlib.sha256(json_medica_plano.encode("utf-8")).hexdigest()
+        if json_medica_plano else ""
+    )
+    hash_admin = (
+        hashlib.sha256(json_admin_plano.encode("utf-8")).hexdigest()
+        if json_admin_plano else ""
+    )
 
-    hash_maestro = hashlib.sha256((hash_publica + hash_medica + hash_admin).encode("utf-8")).hexdigest()
+    hash_maestro = hashlib.sha256(
+        (hash_publica + hash_medica + hash_admin).encode("utf-8")
+    ).hexdigest()
 
     aura_fondo = generar_aura_fondo(hash_maestro, IMG_WIDTH, IMG_HEIGHT)
 
     sha_payload = hash_maestro[:SHA_PAYLOAD_HEX]
-    mensaje_a_firmar = f"PUB:{json_publica}|MED:{json_medica}|ADM:{json_admin}|SHA:{sha_payload}"
+    mensaje_a_firmar = (
+        f"PUB:{json_publica}"
+        f"|MED:{json_medica}"
+        f"|ADM:{json_admin}"
+        f"|SHA:{sha_payload}"
+    )
     bloque_sig = firmar_payload(mensaje_a_firmar, priv_key)
     contenido_dm = mensaje_a_firmar + bloque_sig
 
     data_matrix = generar_data_matrix(contenido_dm, DM_SIZE)
-    qr_auxiliar = generar_qr_auxiliar(f"PUB:{json_publica}", QR_SIZE)
 
     imagen_final = componer_imagen(
         aura_fondo=aura_fondo,
@@ -284,21 +382,23 @@ def procesar_escenario(escenario, priv_key):
         hash_publico=hash_publica,
         id_escenario=id_escenario,
         sector=sector,
-        qr_auxiliar=qr_auxiliar
     )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     ruta_salida = OUTPUT_DIR / f"aura_{id_escenario}.png"
     imagen_final.save(ruta_salida, "PNG", optimize=True)
+
     return ruta_salida
 
+
 # =====================================================================
-# MAIN
+# FUNCION PRINCIPAL
 # =====================================================================
 
 def main() -> None:
     print("=" * 60)
-    print("  AuraHash ID - Generador Universal v3.0.9")
+    print("  AuraHash ID - Generador Universal v3.0.1")
+    print(f"  (Payload completo + Aura {int(AURA_OPACIDAD*100)}% opacidad + nonce determinista)")
     print("=" * 60)
     print()
 
@@ -308,13 +408,21 @@ def main() -> None:
 
     try:
         cargar_clave_aes()
-    except Exception as e:
-        print(f"[ERROR] Clave AES: {e}")
+        print(f"[INFO] Clave AES cargada: {KEY_FILE.name} ({AES_KEY_BYTES} bytes)")
+    except (FileNotFoundError, ValueError) as e:
+        print(f"[ERROR] Problema con la clave AES:\n{e}")
         return
 
-    priv_key = cargar_llave_ed25519_privada()
-    if priv_key is None:
-        print("[AVISO] No hay llave Ed25519 privada. Payload se generara SIN firma.")
+    priv_key = None
+    try:
+        priv_key = cargar_llave_ed25519_privada()
+        if priv_key is not None:
+            print(f"[INFO] Llave Ed25519 privada cargada: {ED25519_PRIV_FILE.name}")
+        else:
+            print("[AVISO] No hay llave Ed25519 privada. Payload se generara SIN firma.")
+    except ValueError as e:
+        print(f"[ERROR] Problema con la llave Ed25519:\n{e}")
+        return
 
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         datos = json.load(f)
@@ -324,21 +432,30 @@ def main() -> None:
         print("[ERROR] El archivo JSON no contiene la clave 'escenarios'.")
         return
 
-    print(f"[INFO] Escenarios encontrados: {len(escenarios)}\n")
+    print(f"[INFO] Escenarios encontrados: {len(escenarios)}")
+    print()
 
     resultados = []
     for i, escenario in enumerate(escenarios, start=1):
-        print(f"[{i}/{len(escenarios)}] Procesando: {escenario['id']}")
+        perfil = "?"
+        capa_pub = escenario.get("capa_publica") or {}
+        if isinstance(capa_pub, dict):
+            perfil = capa_pub.get("perfil", "?")
+        print(f"[{i}/{len(escenarios)}] Procesando: {escenario['id']} ({escenario['sector']}) [perfil: {perfil}]")
         try:
             ruta = procesar_escenario(escenario, priv_key)
             resultados.append((escenario["id"], ruta))
-            print(f"        OK -> {ruta.name}")
+            print(f"        OK Generado: {ruta.name}")
         except Exception as e:
             print(f"        ERROR: {e}")
 
-    print("\n" + "=" * 60)
-    print(f"  Completado: {len(resultados)}/{len(escenarios)}")
+    print()
     print("=" * 60)
+    print(f"  Generacion completada: {len(resultados)}/{len(escenarios)} imagenes")
+    print("=" * 60)
+    for id_esc, ruta in resultados:
+        print(f"  * {id_esc:<30} -> {ruta.name}")
+
 
 if __name__ == "__main__":
     main()
